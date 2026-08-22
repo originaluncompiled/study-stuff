@@ -1,6 +1,6 @@
 import { Clock3, LibraryBig, Settings2, type LucideIcon } from 'lucide-react-native';
 import { Pressable, View } from 'react-native';
-import Animated, { FadeIn, FadeOut, LinearTransition } from 'react-native-reanimated';
+import Animated, { FadeIn, LinearTransition } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppText } from '@/components/app-text';
@@ -49,23 +49,28 @@ export function MainTabBar({
               accessibilityLabel={label}
               accessibilityRole="tab"
               accessibilityState={{ selected }}
-              className={`min-h-14 flex-row items-center justify-center overflow-hidden rounded-full border-2 border-ink active:opacity-90 ${
-                selected ? 'gap-2 bg-ink px-6' : 'w-14 bg-paper-raised'
-              }`}
+              className="min-h-14 flex-row items-center justify-center overflow-hidden rounded-full border-2 border-ink active:opacity-90"
               layout={tabTransition}
-              onPress={() => onPress(route)}>
-              <Icon
-                color={selected ? colors.purple : colors.ink}
-                size={22}
-                strokeWidth={2.4}
+              onPress={() => onPress(route)}
+              style={{ minWidth: 56 }}>
+              <View
+                className="absolute inset-0"
+                pointerEvents="none"
+                style={{ backgroundColor: selected ? colors.ink : colors.paperRaised }}
+                testID={`${label.toLowerCase()}-tab-background`}
               />
               {selected ? (
-                <Animated.View entering={FadeIn.duration(120)} exiting={FadeOut.duration(80)}>
-                  <AppText variant="label" className="text-paper">
-                    {label}
-                  </AppText>
-                </Animated.View>
-              ) : null}
+                <View className="flex-row items-center gap-2 px-6">
+                  <Icon color={colors.purple} size={22} strokeWidth={2.4} />
+                  <Animated.View entering={FadeIn.duration(120)}>
+                    <AppText variant="label" className="text-paper">
+                      {label}
+                    </AppText>
+                  </Animated.View>
+                </View>
+              ) : (
+                <Icon color={colors.ink} size={22} strokeWidth={2.4} />
+              )}
             </AnimatedPressable>
           );
         })}
