@@ -1,27 +1,39 @@
 import { Tabs } from 'expo-router';
+import { CommonActions } from 'expo-router/react-navigation';
 
-import { LibraryTabBar } from '@/components/library-tab-bar';
+import { AnimatedTabPage } from '@/components/animated-tab-page';
+import { MainTabBar, type MainTabRoute } from '@/components/main-tab-bar';
 
 export default function TabsLayout() {
   return (
     <Tabs
       tabBar={({ navigation, state }) => (
-        <LibraryTabBar
-          onPress={() => {
-            const route = state.routes[0];
+        <MainTabBar
+          activeRoute={state.routes[state.index].name as MainTabRoute}
+          onPress={(routeName) => {
+            const route = state.routes.find(({ name }) => name === routeName);
+            if (!route) {
+              return;
+            }
             const event = navigation.emit({
               canPreventDefault: true,
               target: route.key,
               type: 'tabPress',
             });
             if (!event.defaultPrevented) {
-              navigation.navigate(route.name, route.params);
+              navigation.dispatch({
+                ...CommonActions.navigate(route),
+                target: state.key,
+              });
             }
           }}
         />
       )}
+      screenLayout={({ children }) => <AnimatedTabPage>{children}</AnimatedTabPage>}
       screenOptions={{ headerShown: false }}>
       <Tabs.Screen name="(library)" options={{ title: 'Library' }} />
+      <Tabs.Screen name="timer" options={{ title: 'Timer' }} />
+      <Tabs.Screen name="settings" options={{ title: 'Settings' }} />
     </Tabs>
   );
 }

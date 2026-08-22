@@ -15,7 +15,7 @@ import { AppText } from '@/components/app-text';
 import { FolderColorPicker } from '@/components/folder-color-picker';
 import { FolderTile } from '@/components/folder-tile';
 import { ImportOverlay } from '@/components/import-overlay';
-import { getLibraryTabBarHeight } from '@/components/library-tab-bar';
+import { getMainTabBarHeight } from '@/components/main-tab-bar';
 import { NameDialog } from '@/components/name-dialog';
 import { colors } from '@/constants/theme';
 import { useLibraryStore } from '@/store/library-store';
@@ -193,7 +193,7 @@ export default function LibraryScreen() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{
           paddingHorizontal: 20,
-          paddingBottom: getLibraryTabBarHeight(insets.bottom) + 8,
+          paddingBottom: getMainTabBarHeight(insets.bottom) + 8,
         }}>
         <View className="mb-7 mt-5">
           <View className="mb-3 h-2 w-16 rounded-full bg-purple" />

@@ -8,7 +8,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { ActionRow, ActionSheet } from '@/components/action-sheet';
 import { AppText } from '@/components/app-text';
 import { EntryRow } from '@/components/entry-row';
-import { getLibraryTabBarHeight } from '@/components/library-tab-bar';
+import { getMainTabBarHeight } from '@/components/main-tab-bar';
 import { NameDialog } from '@/components/name-dialog';
 import { colors } from '@/constants/theme';
 import { normalizePdfName, validateItemName } from '@/lib/names';
@@ -213,7 +213,7 @@ export default function FolderScreen() {
             contentContainerStyle={{
               flexGrow: 1,
               padding: 20,
-              paddingBottom: getLibraryTabBarHeight(insets.bottom) + 8,
+              paddingBottom: getMainTabBarHeight(insets.bottom) + 8,
             }}
             showsVerticalScrollIndicator={false}
             ListEmptyComponent={
