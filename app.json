@@ -1,25 +1,38 @@
 {
   "expo": {
     "name": "StudyStuff",
-    "slug": "StudyStuff",
+    "slug": "study-stuff",
     "version": "1.0.0",
-    "orientation": "portrait",
+    "backgroundColor": "#F7F1E3",
+    "orientation": "default",
     "icon": "./assets/images/icon.png",
     "scheme": "studystuff",
-    "userInterfaceStyle": "automatic",
+    "userInterfaceStyle": "light",
     "ios": {
-      "icon": "./assets/expo.icon"
+      "icon": "./assets/images/icon.png"
     },
     "android": {
+      "package": "com.justoriginal.studystuff",
+      "blockedPermissions": [
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE"
+      ],
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
+        "backgroundColor": "#F8F1E4",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": true,
+      "permissions": [
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE",
+        "android.permission.DOWNLOAD_WITHOUT_NOTIFICATION",
+        "android.permission.ACCESS_NETWORK_STATE"
+      ]
     },
     "web": {
+      "bundler": "metro",
       "output": "static",
       "favicon": "./assets/images/favicon.png"
     },
@@ -28,15 +41,30 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#208AEF",
-          "image": "./assets/images/splash-icon.png",
-          "imageWidth": 76
-        }
-      ]
+           "backgroundColor": "#F7F1E3",
+           "image": "./assets/images/splash-icon.png",
+           "imageWidth": 220
+         }
+       ],
+       [
+         "expo-status-bar",
+         {
+           "hidden": false,
+           "style": "dark"
+         }
+       ],
+       "@config-plugins/react-native-pdf",
+       "@config-plugins/react-native-blob-util"
     ],
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "306360f0-9456-4137-8c95-62e2f5bf6f1e"
+      }
     }
   }
 }

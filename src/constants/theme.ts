@@ -1,65 +1,51 @@
-/**
- * Below are the colors that are used in the app. The colors are defined in the light and dark mode.
- * There are many other ways to style your app. For example, [Nativewind](https://www.nativewind.dev/), [Tamagui](https://tamagui.dev/), [unistyles](https://reactnativeunistyles.vercel.app), etc.
- */
+import type { FolderColor } from '@/types/library';
 
-import '@/global.css';
-
-import { Platform } from 'react-native';
-
-export const Colors = {
-  light: {
-    text: '#000000',
-    background: '#ffffff',
-    backgroundElement: '#F0F0F3',
-    backgroundSelected: '#E0E1E6',
-    textSecondary: '#60646C',
-  },
-  dark: {
-    text: '#ffffff',
-    background: '#000000',
-    backgroundElement: '#212225',
-    backgroundSelected: '#2E3135',
-    textSecondary: '#B0B4BA',
-  },
+export const colors = {
+  paper: '#F7F1E3',
+  paperRaised: '#FFF9ED',
+  purple: '#6D3CEB',
+  purpleDark: '#4D1FB8',
+  ink: '#141116',
+  muted: '#716B75',
+  line: '#D8CEBE',
+  danger: '#B42318',
+  folderRed: '#D9554D',
+  folderGreen: '#46A758',
+  folderOrange: '#E58A2B',
+  folderPink: '#D95D8A',
+  folderBlue: '#3F7CCF',
+  folderTeal: '#2E9C91',
+  folderYellow: '#E2B93F',
+  folderBlack: '#2B272D',
+  folderGray: '#CFCDD2',
+  white: '#FFFFFF',
 } as const;
 
-export type ThemeColor = keyof typeof Colors.light & keyof typeof Colors.dark;
+export const defaultFolderColor: FolderColor = 'purple';
 
-export const Fonts = Platform.select({
-  ios: {
-    /** iOS `UIFontDescriptorSystemDesignDefault` */
-    sans: 'system-ui',
-    /** iOS `UIFontDescriptorSystemDesignSerif` */
-    serif: 'ui-serif',
-    /** iOS `UIFontDescriptorSystemDesignRounded` */
-    rounded: 'ui-rounded',
-    /** iOS `UIFontDescriptorSystemDesignMonospaced` */
-    mono: 'ui-monospace',
-  },
-  default: {
-    sans: 'normal',
-    serif: 'serif',
-    rounded: 'normal',
-    mono: 'monospace',
-  },
-  web: {
-    sans: 'var(--font-display)',
-    serif: 'var(--font-serif)',
-    rounded: 'var(--font-rounded)',
-    mono: 'var(--font-mono)',
-  },
-});
+export const folderColorOptions: readonly {
+  hex: string;
+  id: FolderColor;
+  label: string;
+}[] = [
+  { hex: colors.folderRed, id: 'red', label: 'Red' },
+  { hex: colors.folderOrange, id: 'orange', label: 'Orange' },
+  { hex: colors.folderYellow, id: 'yellow', label: 'Yellow' },
+  { hex: colors.folderGreen, id: 'green', label: 'Green' },
+  { hex: colors.folderTeal, id: 'teal', label: 'Teal' },
+  { hex: colors.folderBlue, id: 'blue', label: 'Blue' },
+  { hex: colors.purple, id: 'purple', label: 'Purple' },
+  { hex: colors.folderPink, id: 'pink', label: 'Pink' },
+  { hex: colors.folderBlack, id: 'black', label: 'Black' },
+  { hex: colors.folderGray, id: 'gray', label: 'Light gray' },
+];
 
-export const Spacing = {
-  half: 2,
-  one: 4,
-  two: 8,
-  three: 16,
-  four: 24,
-  five: 32,
-  six: 64,
-} as const;
+export const folderColorValues: Record<FolderColor, string> = Object.fromEntries(
+  folderColorOptions.map((option) => [option.id, option.hex]),
+) as Record<FolderColor, string>;
 
-export const BottomTabInset = Platform.select({ ios: 50, android: 80 }) ?? 0;
-export const MaxContentWidth = 800;
+export function isFolderColor(value: unknown): value is FolderColor {
+  return typeof value === 'string' && Object.prototype.hasOwnProperty.call(folderColorValues, value);
+}
+
+export const libraryTabHeight = 78;
