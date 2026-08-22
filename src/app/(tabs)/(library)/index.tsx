@@ -311,6 +311,7 @@ export default function LibraryScreen() {
         onSubmit={createNamedFolder}
       />
       <NameDialog
+        centerInTopHalf
         confirmLabel="Rename"
         initialValue={renameTarget?.name}
         title="Rename Folder"

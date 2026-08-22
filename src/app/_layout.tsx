@@ -69,8 +69,6 @@ export default function RootLayout() {
             headerTintColor: colors.ink,
             headerShadowVisible: false,
             headerTitleStyle: { fontFamily: 'DMSans_600SemiBold' },
-            statusBarHidden: false,
-            statusBarStyle: 'dark',
           }}>
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
           <Stack.Screen

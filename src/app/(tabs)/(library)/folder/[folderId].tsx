@@ -213,7 +213,7 @@ export default function FolderScreen() {
             contentContainerStyle={{
               flexGrow: 1,
               padding: 20,
-              paddingBottom: getLibraryTabBarHeight(insets.bottom) + 20,
+              paddingBottom: getLibraryTabBarHeight(insets.bottom) + 8,
             }}
             showsVerticalScrollIndicator={false}
             ListEmptyComponent={
@@ -289,6 +289,7 @@ export default function FolderScreen() {
         onSubmit={createNamedSubfolder}
       />
       <NameDialog
+        centerInTopHalf
         confirmLabel="Rename"
         initialValue={renameTarget?.name}
         inputLabel={renameTarget?.kind === 'pdf' ? 'PDF name' : 'Folder name'}

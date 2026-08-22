@@ -1,5 +1,5 @@
 import { act, fireEvent, render } from '@testing-library/react-native';
-import { Keyboard, Platform, StyleSheet } from 'react-native';
+import { Dimensions, Keyboard, Platform, StyleSheet } from 'react-native';
 
 import { NameDialog } from '@/components/name-dialog';
 
@@ -18,7 +18,26 @@ describe('NameDialog', () => {
     expect(view.getByLabelText('Folder name').props.selectTextOnFocus).not.toBe(true);
   });
 
-  test('centers the dialog within the height remaining above the keyboard', async () => {
+  test('centers the dialog within the top half of the screen', async () => {
+    const view = await render(
+      <NameDialog
+        centerInTopHalf
+        onClose={jest.fn()}
+        onSubmit={jest.fn()}
+        title="Name Folder"
+        visible
+      />,
+    );
+    const [positioningView] = view.container.queryAll(
+      (node) => node.props.className === 'justify-center',
+    );
+
+    expect(StyleSheet.flatten(positioningView.props.style)).toMatchObject({
+      height: Dimensions.get('screen').height / 2,
+    });
+  });
+
+  test('centers a standard dialog within the height remaining above the keyboard', async () => {
     const view = await render(
       <NameDialog
         onClose={jest.fn()}

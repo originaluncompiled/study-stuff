@@ -25,7 +25,7 @@ import {
 } from '@/lib/pdf-viewer';
 import { getPdfFile } from '@/services/library-files';
 
-const PDF_HEADER_CONTENT_HEIGHT = 56;
+const PDF_HEADER_CONTENT_HEIGHT = 48;
 const PDF_SCRUBBER_HEIGHT = 48;
 const PDF_SCRUBBER_IDLE_DELAY = 1200;
 const PDF_SCRUBBER_WIDTH = 76;
@@ -60,7 +60,9 @@ export default function PdfScreen() {
   const scrubberPageCount = useSharedValue(0);
   const scrubberTravel = useSharedValue(0);
   const scrubbing = useSharedValue(false);
-  const headerHeight = insets.top + PDF_HEADER_CONTENT_HEIGHT;
+  const headerTopInset = Math.max(insets.top - PDF_VIEWER_INSET, 0);
+  const headerHeight = headerTopInset + PDF_HEADER_CONTENT_HEIGHT;
+  const viewerTopMargin = (headerVisible ? headerHeight : 0) + PDF_VIEWER_INSET;
   const scrubberTop = headerHeight + 12;
   const scrubberBottom = Math.max(insets.bottom, 12) + 12;
   const availableScrubberTravel = Math.max(
@@ -71,9 +73,9 @@ export default function PdfScreen() {
     opacity: headerProgress.get(),
     transform: [{ translateY: (headerProgress.get() - 1) * headerHeight }],
   }));
-  const scrubberAnimatedStyle = useAnimatedStyle(() => ({
+  const scrubberLabelAnimatedStyle = useAnimatedStyle(() => ({
     opacity: scrubberProgress.get(),
-    transform: [{ translateX: (1 - scrubberProgress.get()) * 12 }],
+    transform: [{ scaleX: scrubberProgress.get() }],
   }));
   const scrubberHandleAnimatedStyle = useAnimatedStyle(() => ({
     transform: [{ translateY: scrubberOffset.get() }],
@@ -258,12 +260,15 @@ export default function PdfScreen() {
 
   return (
     <View className="flex-1 bg-ink">
-      <StatusBar hidden={false} style="light" />
+      <StatusBar
+        animated
+        hidden={!headerVisible}
+        hideTransitionAnimation="fade"
+        style="light"
+      />
       <Stack.Screen
         options={{
           headerShown: false,
-          statusBarHidden: false,
-          statusBarStyle: 'light',
         }}
       />
       {error ? (
@@ -293,33 +298,41 @@ export default function PdfScreen() {
           onTouchEnd={finishPdfScroll}
           onTouchMove={beginPdfScroll}
           testID="pdf-viewer-container">
-          <Pdf
-            enablePaging={false}
-            fitPolicy={0}
-            horizontal={false}
-            maxScale={5}
-            minScale={1}
-            onError={(pdfError) => {
-              setLoading(false);
-              setViewerError(pdfError instanceof Error ? pdfError.message : String(pdfError));
-            }}
-            onLoadComplete={(pageCount) => {
-              setLoading(false);
-              setNumberOfPages(pageCount);
-            }}
-            onPageChanged={updateHeaderForPage}
-            ref={pdfRef}
-            source={{ uri }}
-            spacing={8}
+          <View
+            testID="pdf-viewport"
             style={{
-              flex: 1,
               width: Math.max(width - PDF_VIEWER_INSET * 2, 1),
-              height: Math.max(height - PDF_VIEWER_INSET * 2, 1),
-              margin: PDF_VIEWER_INSET,
-              backgroundColor: colors.ink,
-            }}
-            trustAllCerts={false}
-          />
+              height: Math.max(height - viewerTopMargin - PDF_VIEWER_INSET, 1),
+              marginBottom: PDF_VIEWER_INSET,
+              marginHorizontal: PDF_VIEWER_INSET,
+              marginTop: viewerTopMargin,
+            }}>
+            <Pdf
+              enablePaging={false}
+              fitPolicy={0}
+              horizontal={false}
+              maxScale={5}
+              minScale={1}
+              onError={(pdfError) => {
+                setLoading(false);
+                setViewerError(pdfError instanceof Error ? pdfError.message : String(pdfError));
+              }}
+              onLoadComplete={(pageCount) => {
+                setLoading(false);
+                setNumberOfPages(pageCount);
+              }}
+              onPageChanged={updateHeaderForPage}
+              ref={pdfRef}
+              source={{ uri }}
+              spacing={8}
+              style={{
+                flex: 1,
+                width: '100%',
+                backgroundColor: colors.ink,
+              }}
+              trustAllCerts={false}
+            />
+          </View>
           {loading ? (
             <View className="absolute inset-0 items-center justify-center bg-ink">
               <ActivityIndicator color={colors.purple} size="large" />
@@ -329,25 +342,16 @@ export default function PdfScreen() {
             </View>
           ) : null}
           {numberOfPages > 1 ? (
-            <Animated.View
-              accessibilityElementsHidden={!scrubberVisible}
-              importantForAccessibility={scrubberVisible ? 'auto' : 'no-hide-descendants'}
-              pointerEvents={scrubberVisible ? 'box-none' : 'none'}
+            <View
+              pointerEvents="box-none"
               testID="pdf-page-scrubber"
               className="absolute z-20"
-              style={[
-                {
-                  bottom: scrubberBottom,
-                  right: Math.max(insets.right, 8),
-                  top: scrubberTop,
-                  width: PDF_SCRUBBER_WIDTH,
-                },
-                scrubberAnimatedStyle,
-              ]}>
-              <View
-                pointerEvents="none"
-                className="absolute bottom-0 right-1 top-0 w-1 rounded-full bg-paper/30"
-              />
+              style={{
+                bottom: scrubberBottom,
+                right: Math.max(insets.right, 8),
+                top: scrubberTop,
+                width: PDF_SCRUBBER_WIDTH,
+              }}>
               <GestureDetector gesture={pageScrubberGesture}>
                 <Animated.View
                   accessible
@@ -368,18 +372,38 @@ export default function PdfScreen() {
                     }
                   }}
                   testID="pdf-page-scrubber-handle"
-                  className="absolute right-0 h-12 w-[76px] flex-row items-center rounded-2xl border-2 border-ink bg-paper-raised pl-3 pr-2"
+                  className="absolute right-0 h-12 w-[76px] items-end justify-center"
                   style={scrubberHandleAnimatedStyle}>
-                  <AppText
-                    variant="label"
-                    className="flex-1 text-center text-sm text-ink"
-                    numberOfLines={1}>
-                    {displayedPage} / {numberOfPages}
-                  </AppText>
-                  <View className="ml-2 h-7 w-1.5 rounded-full bg-purple" />
+                  <Animated.View
+                    pointerEvents="none"
+                    testID="pdf-page-scrubber-label"
+                    className="absolute right-2 rounded-lg bg-white/10 px-2 py-1"
+                    style={[
+                      { transformOrigin: 'right center' },
+                      scrubberLabelAnimatedStyle,
+                    ]}>
+                    <AppText
+                      variant="label"
+                      className="text-[15px] text-ink"
+                      numberOfLines={1}
+                      style={{
+                        fontFamily: 'DMSans_700Bold',
+                        fontWeight: '700',
+                        textShadowColor: colors.white,
+                        textShadowOffset: { width: 0, height: 0 },
+                        textShadowRadius: 2,
+                      }}>
+                      {displayedPage} / {numberOfPages}
+                    </AppText>
+                  </Animated.View>
+                  <View
+                    pointerEvents="none"
+                    testID="pdf-page-scrubber-progress"
+                    className="mr-1 h-[29px] w-1.5 rounded-full bg-purple"
+                  />
                 </Animated.View>
               </GestureDetector>
-            </Animated.View>
+            </View>
           ) : null}
         </View>
       ) : null}
@@ -390,7 +414,7 @@ export default function PdfScreen() {
         pointerEvents={headerVisible ? 'auto' : 'none'}
         testID="pdf-header"
         className="absolute left-0 right-0 top-0 z-10 flex-row items-center bg-ink px-2"
-        style={[{ height: headerHeight, paddingTop: insets.top }, headerAnimatedStyle]}>
+        style={[{ height: headerHeight, paddingTop: headerTopInset }, headerAnimatedStyle]}>
         <Pressable
           accessibilityLabel="Go back"
           accessibilityRole="button"
