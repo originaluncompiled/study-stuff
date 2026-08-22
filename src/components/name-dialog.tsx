@@ -3,7 +3,6 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Modal,
-  Platform,
   Pressable,
   TextInput,
   View,
@@ -84,7 +83,7 @@ function NameDialogContent({
   return (
     <Modal animationType="fade" transparent visible onRequestClose={onClose}>
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior="height"
         className="flex-1 justify-center bg-black/40 px-5">
         <Pressable accessible={false} className="absolute inset-0" onPress={onClose} />
         <View
@@ -105,7 +104,6 @@ function NameDialogContent({
             placeholder="e.g. Biology"
             placeholderTextColor={colors.muted}
             returnKeyType="done"
-            selectTextOnFocus={Boolean(initialValue)}
             value={name}
           />
           {error ? (

@@ -76,6 +76,7 @@ export default function RootLayout() {
           <Stack.Screen
             name="pdf/[folderId]"
             options={{
+              headerShown: false,
               headerStyle: { backgroundColor: colors.ink },
               headerTintColor: colors.paper,
               contentStyle: { backgroundColor: colors.ink },

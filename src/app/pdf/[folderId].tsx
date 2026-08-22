@@ -1,10 +1,16 @@
-import { Stack, useLocalSearchParams } from 'expo-router';
+import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { AlertCircle } from 'lucide-react-native';
+import { AlertCircle, ChevronLeft } from 'lucide-react-native';
 import { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, View, useWindowDimensions } from 'react-native';
+import { ActivityIndicator, Pressable, View, useWindowDimensions } from 'react-native';
 import Pdf from 'react-native-pdf';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import Animated, {
+  Easing,
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+} from 'react-native-reanimated';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppText } from '@/components/app-text';
 import { colors } from '@/constants/theme';
@@ -12,8 +18,12 @@ import { normalizeRelativePath } from '@/lib/paths';
 import { getPdfHeaderVisibility } from '@/lib/pdf-viewer';
 import { getPdfFile } from '@/services/library-files';
 
+const PDF_HEADER_CONTENT_HEIGHT = 56;
+
 export default function PdfScreen() {
   const params = useLocalSearchParams<'/pdf/[folderId]'>();
+  const router = useRouter();
+  const insets = useSafeAreaInsets();
   const rawPath = Array.isArray(params.path) ? params.path[0] : params.path;
   const { width, height } = useWindowDimensions();
   const [loading, setLoading] = useState(true);
@@ -21,6 +31,12 @@ export default function PdfScreen() {
   const [resolution, setResolution] = useState<PdfResolution | null>(null);
   const [headerVisible, setHeaderVisible] = useState(true);
   const previousPage = useRef(1);
+  const headerProgress = useSharedValue(1);
+  const headerHeight = insets.top + PDF_HEADER_CONTENT_HEIGHT;
+  const headerAnimatedStyle = useAnimatedStyle(() => ({
+    opacity: headerProgress.get(),
+    transform: [{ translateY: (headerProgress.get() - 1) * headerHeight }],
+  }));
 
   useEffect(() => {
     const timeout = setTimeout(() => {
@@ -29,26 +45,35 @@ export default function PdfScreen() {
     return () => clearTimeout(timeout);
   }, [params.folderId, rawPath]);
 
+  useEffect(() => {
+    headerProgress.set(
+      withTiming(headerVisible ? 1 : 0, {
+        duration: 200,
+        easing: Easing.out(Easing.cubic),
+      }),
+    );
+  }, [headerProgress, headerVisible]);
+
   const { fileName = 'PDF', uri = null, error: routeError = null } = resolution ?? {};
 
   const error = routeError || viewerError;
 
   function updateHeaderForPage(page: number) {
-    setHeaderVisible((currentVisibility) =>
-      getPdfHeaderVisibility(previousPage.current, page, currentVisibility),
-    );
+    const lastPage = previousPage.current;
     previousPage.current = page;
+    setHeaderVisible((currentVisibility) =>
+      getPdfHeaderVisibility(lastPage, page, currentVisibility),
+    );
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-ink" edges={headerVisible ? [] : ['top']}>
+    <View className="flex-1 bg-ink">
       <StatusBar hidden={false} style="light" />
       <Stack.Screen
         options={{
-          headerShown: headerVisible,
+          headerShown: false,
           statusBarHidden: false,
           statusBarStyle: 'light',
-          title: fileName,
         }}
       />
       {error ? (
@@ -105,7 +130,32 @@ export default function PdfScreen() {
           ) : null}
         </View>
       ) : null}
-    </SafeAreaView>
+
+      <Animated.View
+        accessibilityElementsHidden={!headerVisible}
+        importantForAccessibility={headerVisible ? 'auto' : 'no-hide-descendants'}
+        pointerEvents={headerVisible ? 'auto' : 'none'}
+        testID="pdf-header"
+        className="absolute left-0 right-0 top-0 z-10 flex-row items-center bg-ink px-2"
+        style={[{ height: headerHeight, paddingTop: insets.top }, headerAnimatedStyle]}>
+        <Pressable
+          accessibilityLabel="Go back"
+          accessibilityRole="button"
+          className="h-12 w-12 items-center justify-center rounded-full active:bg-white/10"
+          onPress={() => router.back()}>
+          <ChevronLeft color={colors.paper} size={30} strokeWidth={2.2} />
+        </Pressable>
+        <AppText
+          accessibilityRole="header"
+          ellipsizeMode="middle"
+          numberOfLines={1}
+          variant="label"
+          className="flex-1 text-center text-paper">
+          {fileName}
+        </AppText>
+        <View className="h-12 w-12" />
+      </Animated.View>
+    </View>
   );
 }
 

@@ -11,6 +11,9 @@ describe('FolderTile', () => {
     await fireEvent.press(view.getByRole('button', { name: 'Add folder' }));
     expect(onPress).toHaveBeenCalledTimes(1);
     expect(view.getByText('Add folder')).toBeTruthy();
+    expect(view.getByRole('button', { name: 'Add folder' }).props.className).not.toContain(
+      'active:translate',
+    );
   });
 
   test('provides separate open and manage actions', async () => {

@@ -44,7 +44,7 @@ export function FolderTile(props: FolderTileProps) {
           accessibilityHint={add ? undefined : 'Long press and drag to reorder.'}
           accessibilityLabel={add ? 'Add folder' : `Open ${name}`}
           accessibilityRole="button"
-          className={`flex-1 items-center justify-center rounded-[26px] border-2 border-ink active:translate-x-1 active:translate-y-1 ${
+          className={`flex-1 items-center justify-center rounded-[26px] border-2 border-ink active:opacity-90 ${
             add ? 'border-dashed bg-paper-raised' : ''
           }`}
           onAccessibilityAction={(event) => {
