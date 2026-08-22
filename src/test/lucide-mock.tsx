@@ -26,4 +26,7 @@ export const Play = MockIcon;
 export const Plus = MockIcon;
 export const RotateCcw = MockIcon;
 export const Settings2 = MockIcon;
+export const SkipForward = MockIcon;
+export const Square = MockIcon;
 export const Trash2 = MockIcon;
+export const X = MockIcon;

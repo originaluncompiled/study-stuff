@@ -198,6 +198,9 @@ export default function LibraryScreen() {
         <View className="mb-7 mt-5">
           <View className="mb-3 h-2 w-16 rounded-full bg-purple" />
           <AppText variant="display">Study Stuff</AppText>
+          <AppText className="mt-2 max-w-md" variant="body">
+            Organize all your stuff that you use to study.
+          </AppText>
           {hydrationError ? (
             <View className="mt-4 rounded-2xl border border-danger bg-paper-raised px-4 py-3">
               <AppText variant="caption" className="text-danger">

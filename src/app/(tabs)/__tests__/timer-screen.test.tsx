@@ -2,6 +2,9 @@ import { act, fireEvent, render } from '@testing-library/react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import TimerScreen from '@/app/(tabs)/timer';
+import { TimerRuntime } from '@/components/timer-runtime';
+import { createDefaultTimerState, reconcileTimerState } from '@/lib/timer';
+import { useTimerStore } from '@/store/timer-store';
 
 function renderTimer() {
   return render(
@@ -10,12 +13,22 @@ function renderTimer() {
         frame: { height: 844, width: 390, x: 0, y: 0 },
         insets: { bottom: 34, left: 0, right: 0, top: 47 },
       }}>
+      <TimerRuntime showDialogs={false} />
       <TimerScreen />
     </SafeAreaProvider>,
   );
 }
 
 describe('TimerScreen', () => {
+  beforeEach(() => {
+    useTimerStore.setState({
+      ...reconcileTimerState(createDefaultTimerState(), 0),
+      hydrated: true,
+      hydrationError: null,
+      persistenceError: null,
+    });
+  });
+
   afterEach(() => {
     jest.useRealTimers();
   });
@@ -58,8 +71,11 @@ describe('TimerScreen', () => {
     jest.setSystemTime(new Date('2026-08-22T12:00:00Z'));
     const view = await renderTimer();
 
+    expect(view.getByText('Studying')).toBeTruthy();
+    expect(view.getByText('5m')).toBeTruthy();
     await fireEvent.press(view.getByRole('button', { name: 'Start Timer' }));
     expect(view.getByRole('button', { name: 'Pause Timer' })).toBeTruthy();
+    expect(view.queryByText('5m')).toBeNull();
 
     await act(async () => {
       jest.advanceTimersByTime(1000);
@@ -67,6 +83,13 @@ describe('TimerScreen', () => {
     expect(view.getByText('24:59')).toBeTruthy();
 
     await fireEvent.press(view.getByRole('button', { name: 'Pause Timer' }));
+    expect(view.queryByText('5m')).toBeNull();
+    expect(
+      view.getByRole('button', { name: 'Increase Study Time' }).props.accessibilityState,
+    ).toEqual({ disabled: true });
+    expect(
+      view.getByRole('button', { name: 'Increase Rest Time' }).props.accessibilityState,
+    ).toEqual({ disabled: true });
     await act(async () => {
       jest.advanceTimersByTime(5000);
     });
@@ -80,13 +103,18 @@ describe('TimerScreen', () => {
 
     await fireEvent.press(view.getByRole('button', { name: 'Reset Timer' }));
     expect(view.getByText('25:00')).toBeTruthy();
+    expect(view.getByText('Studying')).toBeTruthy();
+    expect(view.getByText('5m')).toBeTruthy();
     expect(view.getByRole('button', { name: 'Start Timer' })).toBeTruthy();
     expect(view.queryByRole('button', { name: 'Reset Timer' })).toBeNull();
+    expect(
+      view.getByRole('button', { name: 'Increase Study Time' }).props.accessibilityState,
+    ).toEqual({ disabled: false });
 
     await view.unmount();
   });
 
-  test('moves from study to rest and resets after the rest period', async () => {
+  test('moves from study to rest and waits for a continuation choice', async () => {
     jest.useFakeTimers();
     jest.setSystemTime(new Date('2026-08-22T12:00:00Z'));
     const view = await renderTimer();
@@ -99,13 +127,16 @@ describe('TimerScreen', () => {
     await act(async () => {
       jest.advanceTimersByTime(5 * 60 * 1000);
     });
+    expect(view.getByText('Resting')).toBeTruthy();
+    expect(view.queryByText('5m')).toBeNull();
     expect(view.getByLabelText('Rest time remaining, 5:00')).toBeTruthy();
 
     await act(async () => {
       jest.advanceTimersByTime(5 * 60 * 1000);
     });
-    expect(view.getByLabelText('Study time remaining, 5:00')).toBeTruthy();
-    expect(view.getByRole('button', { name: 'Start Timer' })).toBeTruthy();
+    expect(view.getByLabelText('Rest time remaining, 0:00')).toBeTruthy();
+    expect(view.getByRole('button', { name: 'Continue Timer' })).toBeTruthy();
+    expect(useTimerStore.getState().status).toBe('awaitingContinuation');
 
     await view.unmount();
   });

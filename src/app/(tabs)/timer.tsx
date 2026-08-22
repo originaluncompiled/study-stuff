@@ -8,7 +8,7 @@ import {
   RotateCcw,
   type LucideIcon,
 } from 'lucide-react-native';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   type LayoutChangeEvent,
   Pressable,
@@ -28,15 +28,16 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { AppText } from '@/components/app-text';
 import { getMainTabBarHeight } from '@/components/main-tab-bar';
 import { colors } from '@/constants/theme';
+import {
+  formatTimer,
+  MAX_REST_MINUTES,
+  MAX_STUDY_MINUTES,
+  TIMER_DURATION_STEP,
+} from '@/lib/timer';
+import { useTimerStore } from '@/store/timer-store';
 
-const durationStep = 5;
-const maxStudyMinutes = 120;
-const maxRestMinutes = 30;
 const resetButtonSize = 56;
 const timerControlGap = 12;
-
-type TimerPhase = 'study' | 'rest';
-type TimerStatus = 'idle' | 'running' | 'paused';
 
 function DurationCard({
   disabled,
@@ -79,7 +80,7 @@ function DurationCard({
             decreaseDisabled ? 'opacity-30' : ''
           }`}
           disabled={decreaseDisabled}
-          onPress={() => onChange(minutes - durationStep)}>
+          onPress={() => onChange(minutes - TIMER_DURATION_STEP)}>
           <Minus color={colors.ink} size={20} strokeWidth={2.4} />
         </Pressable>
         <View
@@ -102,7 +103,7 @@ function DurationCard({
             increaseDisabled ? 'opacity-30' : ''
           }`}
           disabled={increaseDisabled}
-          onPress={() => onChange(minutes + durationStep)}>
+          onPress={() => onChange(minutes + TIMER_DURATION_STEP)}>
           <Plus color={colors.ink} size={20} strokeWidth={2.4} />
         </Pressable>
       </View>
@@ -113,21 +114,37 @@ function DurationCard({
 export default function TimerScreen() {
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
-  const deadlineRef = useRef<number | null>(null);
-  const [studyMinutes, setStudyMinutes] = useState(25);
-  const [restMinutes, setRestMinutes] = useState(5);
-  const [phase, setPhase] = useState<TimerPhase>('study');
-  const [status, setStatus] = useState<TimerStatus>('idle');
-  const [secondsRemaining, setSecondsRemaining] = useState(studyMinutes * 60);
+  const hydrated = useTimerStore((state) => state.hydrated);
+  const studyMinutes = useTimerStore((state) => state.studyMinutes);
+  const restMinutes = useTimerStore((state) => state.restMinutes);
+  const phase = useTimerStore((state) => state.phase);
+  const status = useTimerStore((state) => state.status);
+  const secondsRemaining = useTimerStore((state) => state.secondsRemaining);
+  const hydrationError = useTimerStore((state) => state.hydrationError);
+  const persistenceError = useTimerStore((state) => state.persistenceError);
+  const setStudyMinutes = useTimerStore((state) => state.setStudyMinutes);
+  const setRestMinutes = useTimerStore((state) => state.setRestMinutes);
+  const start = useTimerStore((state) => state.start);
+  const pause = useTimerStore((state) => state.pause);
+  const resume = useTimerStore((state) => state.resume);
+  const reset = useTimerStore((state) => state.reset);
   const [timerControlsWidth, setTimerControlsWidth] = useState(0);
   const [resetContentVisible, setResetContentVisible] = useState(false);
   const resetProgress = useSharedValue(0);
   const dialSize = Math.min(Math.max(width - 96, 196), 248);
   const stackDurationCards = width < 360;
-  const controlsDisabled = status === 'running';
-  const startDisabled = studyMinutes === 0 && restMinutes === 0;
-  const buttonLabel = status === 'running' ? 'Pause Timer' : status === 'paused' ? 'Resume Timer' : 'Start Timer';
+  const controlsDisabled = !hydrated || status !== 'idle';
+  const startDisabled = !hydrated || (studyMinutes === 0 && restMinutes === 0);
+  const buttonLabel =
+    status === 'running'
+      ? 'Pause Timer'
+      : status === 'paused'
+        ? 'Resume Timer'
+        : status === 'awaitingContinuation'
+          ? 'Continue Timer'
+          : 'Start Timer';
   const TimerButtonIcon = status === 'running' ? Pause : Play;
+  const timerError = persistenceError ?? hydrationError;
   const resetButtonAnimatedStyle = useAnimatedStyle(() => ({
     marginRight: resetProgress.get() * timerControlGap,
     opacity: resetProgress.get(),
@@ -163,100 +180,31 @@ export default function TimerScreen() {
     );
   }, [resetProgress, status]);
 
-  useEffect(() => {
-    if (status !== 'running') {
-      return;
-    }
-
-    const updateTimer = () => {
-      if (deadlineRef.current === null) {
-        return;
-      }
-
-      const nextSeconds = Math.max(0, Math.ceil((deadlineRef.current - Date.now()) / 1000));
-      if (nextSeconds > 0) {
-        setSecondsRemaining(nextSeconds);
-        return;
-      }
-
-      if (phase === 'study' && restMinutes > 0) {
-        const restSeconds = restMinutes * 60;
-        setPhase('rest');
-        setSecondsRemaining(restSeconds);
-        deadlineRef.current = Date.now() + restSeconds * 1000;
-        return;
-      }
-
-      deadlineRef.current = null;
-      setStatus('idle');
-      setPhase('study');
-      setSecondsRemaining(studyMinutes * 60);
-    };
-
-    const interval = setInterval(updateTimer, 250);
-    return () => clearInterval(interval);
-  }, [phase, restMinutes, status, studyMinutes]);
-
   function changeStudyMinutes(minutes: number) {
-    if (controlsDisabled) {
-      return;
-    }
-    setStudyMinutes(minutes);
-    deadlineRef.current = null;
-    setStatus('idle');
-    setPhase('study');
-    setSecondsRemaining(minutes * 60);
+    void setStudyMinutes(minutes);
   }
 
   function changeRestMinutes(minutes: number) {
-    if (controlsDisabled) {
-      return;
-    }
-    setRestMinutes(minutes);
-    if (status === 'paused') {
-      deadlineRef.current = null;
-      setStatus('idle');
-      setPhase('study');
-      setSecondsRemaining(studyMinutes * 60);
-    }
+    void setRestMinutes(minutes);
   }
 
   function handleTimerPress() {
     if (status === 'running') {
-      const pausedSeconds = Math.max(
-        0,
-        Math.ceil(((deadlineRef.current ?? Date.now()) - Date.now()) / 1000),
-      );
-      deadlineRef.current = null;
-      setSecondsRemaining(pausedSeconds);
-      setStatus('paused');
+      void pause();
       return;
     }
 
-    if (status === 'paused' && secondsRemaining > 0) {
-      deadlineRef.current = Date.now() + secondsRemaining * 1000;
-      setStatus('running');
-      return;
-    }
-
-    const startingPhase: TimerPhase = studyMinutes > 0 ? 'study' : 'rest';
-    const startingSeconds = (startingPhase === 'study' ? studyMinutes : restMinutes) * 60;
-    if (startingSeconds === 0) {
+    if (status === 'paused') {
+      void resume();
       return;
     }
 
     setResetContentVisible(true);
-    setPhase(startingPhase);
-    setSecondsRemaining(startingSeconds);
-    deadlineRef.current = Date.now() + startingSeconds * 1000;
-    setStatus('running');
+    void start();
   }
 
   function resetTimer() {
-    deadlineRef.current = null;
-    setStatus('idle');
-    setPhase('study');
-    setSecondsRemaining(studyMinutes * 60);
+    void reset();
   }
 
   function measureTimerControls(event: LayoutChangeEvent) {
@@ -291,8 +239,13 @@ export default function TimerScreen() {
               <View className="flex-1 rounded-full border-2 border-ink bg-purple p-3">
                 <View className="flex-1 items-center justify-center rounded-full border-2 border-ink bg-paper-raised px-4">
                   <AppText
+                    accessibilityLabel={`Current phase, ${phase === 'study' ? 'Studying' : 'Resting'}`}
+                    className="absolute top-4 text-[16px] leading-5 text-purple"
+                    variant="label">
+                    {phase === 'study' ? 'Studying' : 'Resting'}
+                  </AppText>
+                  <AppText
                     accessibilityLabel={`${phase === 'study' ? 'Study' : 'Rest'} time remaining, ${formatTimer(secondsRemaining)}`}
-                    accessibilityLiveRegion="polite"
                     adjustsFontSizeToFit
                     className="text-[58px] leading-[64px]"
                     minimumFontScale={0.8}
@@ -300,16 +253,18 @@ export default function TimerScreen() {
                     variant="display">
                     {formatTimer(secondsRemaining)}
                   </AppText>
-                  <View
-                    accessibilityLabel={`Rest time, ${restMinutes} minutes`}
-                    className="absolute bottom-4 h-5 flex-row items-center gap-1.5">
-                    <Coffee color={colors.purple} size={20} strokeWidth={2.3} />
-                    <AppText
-                      className="font-sans-medium text-[18px] leading-5 text-purple"
-                      variant="caption">
-                      {restMinutes}m
-                    </AppText>
-                  </View>
+                  {status === 'idle' ? (
+                    <View
+                      accessibilityLabel={`Rest time, ${restMinutes} minutes`}
+                      className="absolute bottom-4 h-5 flex-row items-center gap-1.5">
+                      <Coffee color={colors.purple} size={20} strokeWidth={2.3} />
+                      <AppText
+                        className="font-sans-medium text-[18px] leading-5 text-purple"
+                        variant="caption">
+                        {restMinutes}m
+                      </AppText>
+                    </View>
+                  ) : null}
                 </View>
               </View>
             </View>
@@ -324,7 +279,7 @@ export default function TimerScreen() {
               disabled={controlsDisabled}
               icon={BookOpen}
               label="Study Time"
-              maxMinutes={maxStudyMinutes}
+              maxMinutes={MAX_STUDY_MINUTES}
               minutes={studyMinutes}
               purple
               onChange={changeStudyMinutes}
@@ -333,7 +288,7 @@ export default function TimerScreen() {
               disabled={controlsDisabled}
               icon={Coffee}
               label="Rest Time"
-              maxMinutes={maxRestMinutes}
+              maxMinutes={MAX_REST_MINUTES}
               minutes={restMinutes}
               onChange={changeRestMinutes}
             />
@@ -382,14 +337,17 @@ export default function TimerScreen() {
               </Pressable>
             </Animated.View>
           </View>
+
+          {timerError ? (
+            <AppText
+              accessibilityLiveRegion="polite"
+              className="mt-3 text-center text-danger"
+              variant="caption">
+              {timerError}
+            </AppText>
+          ) : null}
         </View>
       </ScrollView>
     </SafeAreaView>
   );
-}
-
-function formatTimer(totalSeconds: number): string {
-  const minutes = Math.floor(totalSeconds / 60);
-  const seconds = totalSeconds % 60;
-  return `${minutes}:${seconds.toString().padStart(2, '0')}`;
 }

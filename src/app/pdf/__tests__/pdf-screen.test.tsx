@@ -6,6 +6,8 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import PdfScreen from '@/app/pdf/[folderId]';
 import { colors } from '@/constants/theme';
+import { createDefaultTimerState, reconcileTimerState } from '@/lib/timer';
+import { useTimerStore } from '@/store/timer-store';
 
 function mockStackScreen({ options }: { options: object }) {
   return <View {...{ options }} testID="stack-screen-options" />;
@@ -46,6 +48,106 @@ jest.mock('@/services/library-files', () => ({
 describe('PdfScreen', () => {
   beforeEach(() => {
     mockSetPage.mockClear();
+    useTimerStore.setState({
+      ...reconcileTimerState(createDefaultTimerState(), 0),
+      hydrated: true,
+      hydrationError: null,
+      persistenceError: null,
+    });
+  });
+
+  test('floats the active countdown below the header and opens timer controls', async () => {
+    useTimerStore.setState({
+      status: 'running',
+      phase: 'study',
+      deadlineAtMs: Date.now() + 25 * 60_000,
+      remainingMs: null,
+      secondsRemaining: 1500,
+    });
+    const view = await render(
+      <SafeAreaProvider
+        initialMetrics={{
+          frame: { height: 844, width: 390, x: 0, y: 0 },
+          insets: { bottom: 34, left: 0, right: 0, top: 47 },
+        }}>
+        <PdfScreen />
+      </SafeAreaProvider>,
+    );
+
+    const pdf = await view.findByTestId('pdf-viewer');
+    const timerPill = view.getByRole('button', {
+      name: 'Study timer, 25:00 remaining. Open timer controls.',
+    });
+    expect(timerPill.props.className).toContain('bg-purple');
+    expect(timerPill.props.className).toContain('h-11');
+    expect(view.getByTestId('pdf-timer-running-icon')).toBeTruthy();
+    expect(view.getByTestId('pdf-header')).toHaveStyle({ height: 83 });
+    expect(view.getByTestId('pdf-timer-pill').props.className).toContain('absolute');
+    expect(view.getByTestId('pdf-timer-pill')).toHaveStyle({ top: 95 });
+    expect(view.getByTestId('pdf-viewport').props.style).toMatchObject({
+      height: Dimensions.get('window').height - 99,
+      marginTop: 91,
+    });
+
+    await act(async () => {
+      pdf.props.onPageChanged(2);
+    });
+    expect(view.queryByRole('button', { name: /Open timer controls/ })).toBeNull();
+    expect(view.getByTestId('pdf-header', { includeHiddenElements: true }).props.pointerEvents).toBe(
+      'none',
+    );
+    const hiddenTimerPill = view.getByTestId('pdf-timer-pill', { includeHiddenElements: true });
+    expect(hiddenTimerPill.props.pointerEvents).toBe('none');
+    await act(() => new Promise((resolve) => setTimeout(resolve, 250)));
+    expect(hiddenTimerPill).toHaveAnimatedStyle({
+      opacity: 0,
+      transform: [{ translateY: -83 }],
+    });
+
+    await act(async () => {
+      pdf.props.onPageChanged(1);
+    });
+
+    await fireEvent.press(view.getByRole('button', { name: /Open timer controls/ }));
+    expect(view.getByRole('header', { name: 'Study timer' })).toBeTruthy();
+    expect(view.getByText('25:00 remaining')).toBeTruthy();
+
+    await fireEvent.press(view.getByRole('button', { name: 'Pause Timer' }));
+    expect(useTimerStore.getState().status).toBe('paused');
+    expect(view.getByTestId('pdf-timer-paused-icon')).toBeTruthy();
+    expect(view.queryByTestId('pdf-timer-running-icon')).toBeNull();
+
+    await fireEvent.press(
+      view.getByRole('button', {
+        name: /Study timer paused, .* remaining\. Open timer controls\./,
+      }),
+    );
+    await fireEvent.press(view.getByRole('button', { name: 'Stop Timer' }));
+    expect(useTimerStore.getState().status).toBe('idle');
+    expect(view.queryByRole('button', { name: /Open timer controls/ })).toBeNull();
+  });
+
+  test('uses a coffee icon while the rest timer is running', async () => {
+    useTimerStore.setState({
+      status: 'running',
+      phase: 'rest',
+      deadlineAtMs: Date.now() + 5 * 60_000,
+      remainingMs: null,
+      secondsRemaining: 300,
+    });
+    const view = await render(
+      <SafeAreaProvider
+        initialMetrics={{
+          frame: { height: 844, width: 390, x: 0, y: 0 },
+          insets: { bottom: 34, left: 0, right: 0, top: 47 },
+        }}>
+        <PdfScreen />
+      </SafeAreaProvider>,
+    );
+
+    await view.findByTestId('pdf-viewer');
+    expect(view.getByTestId('pdf-timer-rest-icon')).toBeTruthy();
+    expect(view.queryByTestId('pdf-timer-running-icon')).toBeNull();
   });
 
   test('keeps the rendered pages away from the screen edges', async () => {
@@ -62,10 +164,10 @@ describe('PdfScreen', () => {
 
     await view.findByTestId('pdf-viewer');
     expect(view.getByTestId('pdf-viewport').props.style).toMatchObject({
-      height: height - 103,
+      height: height - 99,
       marginBottom: 8,
       marginHorizontal: 8,
-      marginTop: 95,
+      marginTop: 91,
       width: width - 16,
     });
   });
@@ -108,7 +210,7 @@ describe('PdfScreen', () => {
     await act(() => new Promise((resolve) => setTimeout(resolve, 250)));
     expect(hiddenHeader).toHaveAnimatedStyle({
       opacity: 0,
-      transform: [{ translateY: -87 }],
+      transform: [{ translateY: -83 }],
     });
 
     await act(async () => {

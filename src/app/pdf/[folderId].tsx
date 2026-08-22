@@ -1,6 +1,6 @@
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { AlertCircle, ChevronLeft } from 'lucide-react-native';
+import { AlertCircle, ChevronLeft, Clock3, Coffee, Pause } from 'lucide-react-native';
 import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, View, useWindowDimensions } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
@@ -16,6 +16,7 @@ import Animated, {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppText } from '@/components/app-text';
+import { TimerManagerSheet } from '@/components/timer-manager-sheet';
 import { colors } from '@/constants/theme';
 import { normalizeRelativePath } from '@/lib/paths';
 import {
@@ -23,9 +24,12 @@ import {
   getPdfScrubberOffset,
   getPdfScrubberPage,
 } from '@/lib/pdf-viewer';
+import { formatTimer } from '@/lib/timer';
 import { getPdfFile } from '@/services/library-files';
+import { useTimerStore } from '@/store/timer-store';
 
-const PDF_HEADER_CONTENT_HEIGHT = 48;
+const PDF_HEADER_CONTENT_HEIGHT = 44;
+const PDF_TIMER_PILL_GAP = 12;
 const PDF_SCRUBBER_HEIGHT = 48;
 const PDF_SCRUBBER_IDLE_DELAY = 1200;
 const PDF_SCRUBBER_WIDTH = 76;
@@ -41,6 +45,7 @@ export default function PdfScreen() {
   const [viewerError, setViewerError] = useState<string | null>(null);
   const [resolution, setResolution] = useState<PdfResolution | null>(null);
   const [headerVisible, setHeaderVisible] = useState(true);
+  const [timerManagerSession, setTimerManagerSession] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [displayedPage, setDisplayedPage] = useState(1);
   const [numberOfPages, setNumberOfPages] = useState(0);
@@ -60,6 +65,21 @@ export default function PdfScreen() {
   const scrubberPageCount = useSharedValue(0);
   const scrubberTravel = useSharedValue(0);
   const scrubbing = useSharedValue(false);
+  const timerHydrated = useTimerStore((state) => state.hydrated);
+  const timerStatus = useTimerStore((state) => state.status);
+  const timerPhase = useTimerStore((state) => state.phase);
+  const timerDeadlineAtMs = useTimerStore((state) => state.deadlineAtMs);
+  const timerRemainingMs = useTimerStore((state) => state.remainingMs);
+  const timerSecondsRemaining = useTimerStore((state) => state.secondsRemaining);
+  const timerActive = timerHydrated && timerStatus !== 'idle';
+  const TimerPillIcon = timerStatus === 'paused' ? Pause : timerPhase === 'rest' ? Coffee : Clock3;
+  const timerSession =
+    timerStatus === 'running'
+      ? `${timerPhase}:running:${timerDeadlineAtMs}`
+      : timerStatus === 'paused'
+        ? `${timerPhase}:paused:${timerRemainingMs}`
+        : null;
+  const timerManagerVisible = timerSession !== null && timerManagerSession === timerSession;
   const headerTopInset = Math.max(insets.top - PDF_VIEWER_INSET, 0);
   const headerHeight = headerTopInset + PDF_HEADER_CONTENT_HEIGHT;
   const viewerTopMargin = (headerVisible ? headerHeight : 0) + PDF_VIEWER_INSET;
@@ -413,25 +433,66 @@ export default function PdfScreen() {
         importantForAccessibility={headerVisible ? 'auto' : 'no-hide-descendants'}
         pointerEvents={headerVisible ? 'auto' : 'none'}
         testID="pdf-header"
-        className="absolute left-0 right-0 top-0 z-10 flex-row items-center bg-ink px-2"
+        className="absolute left-0 right-0 top-0 z-10 bg-ink px-2"
         style={[{ height: headerHeight, paddingTop: headerTopInset }, headerAnimatedStyle]}>
-        <Pressable
-          accessibilityLabel="Go back"
-          accessibilityRole="button"
-          className="h-12 w-12 items-center justify-center rounded-full active:bg-white/10"
-          onPress={() => router.back()}>
-          <ChevronLeft color={colors.paper} size={30} strokeWidth={2.2} />
-        </Pressable>
-        <AppText
-          accessibilityRole="header"
-          ellipsizeMode="middle"
-          numberOfLines={1}
-          variant="label"
-          className="flex-1 text-center text-paper">
-          {fileName}
-        </AppText>
-        <View className="h-12 w-12" />
+        <View className="h-11 flex-row items-center">
+          <Pressable
+            accessibilityLabel="Go back"
+            accessibilityRole="button"
+            className="h-11 w-12 items-center justify-center rounded-full active:bg-white/10"
+            onPress={() => router.back()}>
+            <ChevronLeft color={colors.paper} size={30} strokeWidth={2.2} />
+          </Pressable>
+          <AppText
+            accessibilityRole="header"
+            ellipsizeMode="middle"
+            numberOfLines={1}
+            variant="label"
+            className="flex-1 text-center text-paper">
+            {fileName}
+          </AppText>
+          <View className="h-11 w-12" />
+        </View>
       </Animated.View>
+      {timerActive ? (
+        <Animated.View
+          accessibilityElementsHidden={!headerVisible}
+          importantForAccessibility={headerVisible ? 'auto' : 'no-hide-descendants'}
+          pointerEvents={headerVisible ? 'box-none' : 'none'}
+          testID="pdf-timer-pill"
+          className="absolute left-0 right-0 z-20 items-center"
+          style={[{ top: headerHeight + PDF_TIMER_PILL_GAP }, headerAnimatedStyle]}>
+          <View className="relative h-11 min-w-28">
+            <View className="absolute inset-0 translate-x-1 translate-y-1 rounded-full bg-ink" />
+            <Pressable
+              accessibilityLabel={`${timerPhase === 'study' ? 'Study' : 'Rest'} timer${timerStatus === 'paused' ? ' paused' : ''}, ${formatTimer(timerSecondsRemaining)} remaining. Open timer controls.`}
+              accessibilityRole="button"
+              accessibilityState={{ expanded: timerManagerVisible }}
+              className="h-11 min-w-28 flex-row items-center justify-center gap-2 rounded-full border-2 border-ink bg-purple px-4 active:bg-purple-dark"
+              onPress={() => setTimerManagerSession(timerSession)}>
+              <TimerPillIcon
+                color={colors.white}
+                size={16}
+                strokeWidth={2.4}
+                testID={
+                  timerStatus === 'paused'
+                    ? 'pdf-timer-paused-icon'
+                    : timerPhase === 'rest'
+                      ? 'pdf-timer-rest-icon'
+                      : 'pdf-timer-running-icon'
+                }
+              />
+              <AppText className="text-white" variant="label">
+                {formatTimer(timerSecondsRemaining)}
+              </AppText>
+            </Pressable>
+          </View>
+        </Animated.View>
+      ) : null}
+      <TimerManagerSheet
+        onDismiss={() => setTimerManagerSession(null)}
+        visible={timerManagerVisible}
+      />
     </View>
   );
 }

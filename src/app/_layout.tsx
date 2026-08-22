@@ -8,8 +8,10 @@ import { useEffect } from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { featureFlags } from 'react-native-screens';
 
+import { TimerRuntime } from '@/components/timer-runtime';
 import { colors } from '@/constants/theme';
 import { useLibraryStore } from '@/store/library-store';
+import { useTimerStore } from '@/store/timer-store';
 
 // Work around stale Android Fabric hit targets after orientation changes.
 // https://github.com/software-mansion/react-native-screens/issues/4289
@@ -34,8 +36,10 @@ export const unstable_settings = {
 };
 
 export default function RootLayout() {
-  const hydrated = useLibraryStore((state) => state.hydrated);
-  const hydrate = useLibraryStore((state) => state.hydrate);
+  const libraryHydrated = useLibraryStore((state) => state.hydrated);
+  const hydrateLibrary = useLibraryStore((state) => state.hydrate);
+  const timerHydrated = useTimerStore((state) => state.hydrated);
+  const hydrateTimer = useTimerStore((state) => state.hydrate);
   const [fontsLoaded, fontError] = useFonts({
     DMSans_400Regular: require('@expo-google-fonts/dm-sans/400Regular/DMSans_400Regular.ttf'),
     DMSans_500Medium: require('@expo-google-fonts/dm-sans/500Medium/DMSans_500Medium.ttf'),
@@ -45,16 +49,17 @@ export default function RootLayout() {
   });
 
   useEffect(() => {
-    void hydrate();
-  }, [hydrate]);
+    void hydrateLibrary();
+    void hydrateTimer();
+  }, [hydrateLibrary, hydrateTimer]);
 
   useEffect(() => {
-    if ((fontsLoaded || fontError) && hydrated) {
+    if ((fontsLoaded || fontError) && libraryHydrated && timerHydrated) {
       SplashScreen.hideAsync().catch(() => undefined);
     }
-  }, [fontError, fontsLoaded, hydrated]);
+  }, [fontError, fontsLoaded, libraryHydrated, timerHydrated]);
 
-  if ((!fontsLoaded && !fontError) || !hydrated) {
+  if ((!fontsLoaded && !fontError) || !libraryHydrated || !timerHydrated) {
     return null;
   }
 
@@ -82,6 +87,7 @@ export default function RootLayout() {
             }}
           />
         </Stack>
+        <TimerRuntime />
       </ThemeProvider>
     </GestureHandlerRootView>
   );
