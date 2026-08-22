@@ -1,5 +1,5 @@
 import { act, fireEvent, render } from '@testing-library/react-native';
-import { View } from 'react-native';
+import { Dimensions, View } from 'react-native';
 import { State } from 'react-native-gesture-handler';
 import { fireGestureHandler, getByGestureTestId } from 'react-native-gesture-handler/jest-utils';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -39,6 +39,25 @@ jest.mock('@/services/library-files', () => ({
 describe('PdfScreen', () => {
   beforeEach(() => {
     mockSetPage.mockClear();
+  });
+
+  test('keeps the rendered pages away from the screen edges', async () => {
+    const { height, width } = Dimensions.get('window');
+    const view = await render(
+      <SafeAreaProvider
+        initialMetrics={{
+          frame: { height: 844, width: 390, x: 0, y: 0 },
+          insets: { bottom: 34, left: 0, right: 0, top: 47 },
+        }}>
+        <PdfScreen />
+      </SafeAreaProvider>,
+    );
+
+    expect((await view.findByTestId('pdf-viewer')).props.style).toMatchObject({
+      height: height - 16,
+      margin: 8,
+      width: width - 16,
+    });
   });
 
   test('animates an overlay header without resizing the PDF viewport', async () => {

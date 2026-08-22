@@ -29,6 +29,7 @@ const PDF_HEADER_CONTENT_HEIGHT = 56;
 const PDF_SCRUBBER_HEIGHT = 48;
 const PDF_SCRUBBER_IDLE_DELAY = 1200;
 const PDF_SCRUBBER_WIDTH = 76;
+const PDF_VIEWER_INSET = 8;
 
 export default function PdfScreen() {
   const params = useLocalSearchParams<'/pdf/[folderId]'>();
@@ -312,8 +313,9 @@ export default function PdfScreen() {
             spacing={8}
             style={{
               flex: 1,
-              width,
-              height,
+              width: Math.max(width - PDF_VIEWER_INSET * 2, 1),
+              height: Math.max(height - PDF_VIEWER_INSET * 2, 1),
+              margin: PDF_VIEWER_INSET,
               backgroundColor: colors.ink,
             }}
             trustAllCerts={false}
