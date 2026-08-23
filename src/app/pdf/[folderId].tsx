@@ -66,6 +66,7 @@ export default function PdfScreen() {
   const scrubberPageCount = useSharedValue(0);
   const scrubberTravel = useSharedValue(0);
   const scrubbing = useSharedValue(false);
+  const pendingPageRequest = useSharedValue(0);
   const timerHydrated = useTimerStore((state) => state.hydrated);
   const timerStatus = useTimerStore((state) => state.status);
   const timerPhase = useTimerStore((state) => state.phase);
@@ -205,6 +206,7 @@ export default function PdfScreen() {
   }
 
   function commitScrubberPage(page: number) {
+    pendingPageRequest.set(page);
     setCurrentPage(page);
     setDisplayedPage(page);
     setPageRequest((request) => ({ id: (request?.id ?? 0) + 1, page }));
@@ -217,6 +219,14 @@ export default function PdfScreen() {
   }
 
   function updateHeaderForPage(page: number, pageCount?: number) {
+    const requestedPage = pendingPageRequest.get();
+    if (requestedPage > 0) {
+      if (page !== requestedPage) {
+        return;
+      }
+      pendingPageRequest.set(0);
+    }
+
     const lastPage = previousPage.current;
     previousPage.current = page;
     setCurrentPage(page);
@@ -265,6 +275,7 @@ export default function PdfScreen() {
     })
     .onEnd(() => {
       const page = scrubberPage.get();
+      pendingPageRequest.set(page);
       scrubberCurrentPage.set(page);
       runOnJS(commitScrubberPage)(page);
     })

@@ -277,6 +277,15 @@ describe('PdfScreen', () => {
     expect(mockSetPage).toHaveBeenCalledWith(10);
     expect(view.getByText('10 / 10')).toBeTruthy();
 
+    await act(async () => {
+      pdf.props.onPageChanged(4, 10);
+    });
+    expect(view.getByText('10 / 10')).toBeTruthy();
+
+    await act(async () => {
+      pdf.props.onPageChanged(10, 10);
+    });
+
     await act(() => new Promise((resolve) => setTimeout(resolve, 1300)));
     await act(() => new Promise((resolve) => setTimeout(resolve, 250)));
     expect(view.getByTestId('pdf-page-scrubber-progress')).toBeTruthy();
