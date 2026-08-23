@@ -173,7 +173,7 @@ export const useTimerStore = create<TimerStore>((set, get) => ({
     }
 
     const reconciled = reconcileTimerState(toTimerState(current), nowMs);
-    if (reconciled.status !== 'idle' && reconciled.phase !== 'rest') {
+    if (reconciled.phase !== 'rest') {
       if (reconciled.secondsRemaining !== current.secondsRemaining) {
         set(reconciled);
       }
@@ -183,8 +183,8 @@ export const useTimerStore = create<TimerStore>((set, get) => ({
     const next = reconcileTimerState(
       {
         ...toTimerState(reconciled),
-        status: 'idle',
-        phase: 'study',
+        status: 'awaitingContinuation',
+        phase: 'rest',
         deadlineAtMs: null,
         remainingMs: null,
       },

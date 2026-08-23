@@ -1,5 +1,4 @@
 import { act, fireEvent, render } from '@testing-library/react-native';
-import { Dimensions } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import TabsLayout from '@/app/(tabs)/_layout';
@@ -10,6 +9,7 @@ import { useTimerStore } from '@/store/timer-store';
 const mockDispatch = jest.fn();
 const mockEmit = jest.fn(() => ({ defaultPrevented: false }));
 const mockNavigate = jest.fn();
+let mockTimerScreenOptions: { lazy?: boolean; title?: string } | undefined;
 let mockTabsProps: {
   detachInactiveScreens?: boolean;
   screenLayout?: unknown;
@@ -38,12 +38,17 @@ const mockState = {
 
 jest.mock('expo-router', () => {
   function Tabs(props: {
+    children?: React.ReactElement<{
+      name: string;
+      options?: { lazy?: boolean; title?: string };
+    }>[];
     detachInactiveScreens?: boolean;
     screenLayout?: unknown;
     screenOptions?: typeof mockTabsProps.screenOptions;
     tabBar: (props: object) => React.ReactNode;
   }) {
     mockTabsProps = props;
+    mockTimerScreenOptions = props.children?.find((child) => child.props.name === 'timer')?.props.options;
     return props.tabBar({
       navigation: {
         dispatch: mockDispatch,
@@ -66,6 +71,7 @@ jest.mock('expo-router', () => {
 describe('main tab navigation', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockTimerScreenOptions = undefined;
     mockState.index = 0;
     useTimerStore.setState({
       ...reconcileTimerState(createDefaultTimerState(), 0),
@@ -75,7 +81,7 @@ describe('main tab navigation', () => {
     });
   });
 
-  it('slides pages edge-to-edge without fading', async () => {
+  it('uses the default tab scene lifecycle without content animation', async () => {
     await render(
       <SafeAreaProvider
         initialMetrics={{
@@ -86,26 +92,12 @@ describe('main tab navigation', () => {
       </SafeAreaProvider>,
     );
 
-    const interpolate = jest.fn(() => 'horizontal-offset');
-    const sceneStyle = mockTabsProps.screenOptions?.sceneStyleInterpolator?.({
-      current: { progress: { interpolate } },
-    });
-    const width = Dimensions.get('window').width;
-
     expect(mockTabsProps.screenOptions?.animation).toBeUndefined();
-    expect(mockTabsProps.detachInactiveScreens).toBe(false);
+    expect(mockTabsProps.detachInactiveScreens).toBeUndefined();
+    expect(mockTimerScreenOptions).toEqual({ title: 'Timer' });
     expect(mockTabsProps.screenOptions?.headerShown).toBe(false);
-    expect(mockTabsProps.screenOptions?.transitionSpec).toEqual({
-      animation: 'timing',
-      config: expect.objectContaining({ duration: 220 }),
-    });
-    expect(interpolate).toHaveBeenCalledWith({
-      inputRange: [-1, 0, 1],
-      outputRange: [-width, 0, width],
-    });
-    expect(sceneStyle).toEqual({
-      sceneStyle: { transform: [{ translateX: 'horizontal-offset' }] },
-    });
+    expect(mockTabsProps.screenOptions?.sceneStyleInterpolator).toBeUndefined();
+    expect(mockTabsProps.screenOptions?.transitionSpec).toBeUndefined();
     expect(mockTabsProps.screenLayout).toBeUndefined();
   });
 

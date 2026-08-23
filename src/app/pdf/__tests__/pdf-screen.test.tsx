@@ -84,9 +84,9 @@ describe('PdfScreen', () => {
     expect(view.getByTestId('pdf-header')).toHaveStyle({ height: 85 });
     expect(view.getByTestId('pdf-timer-pill').props.className).toContain('absolute');
     expect(view.getByTestId('pdf-timer-pill')).toHaveStyle({ top: 97 });
-    expect(view.getByTestId('pdf-viewport').props.style).toMatchObject({
-      height: Dimensions.get('window').height - 99,
-      marginTop: 91,
+    expect(view.getByTestId('pdf-viewport').props.style[0]).toMatchObject({
+      height: Dimensions.get('window').height - 16,
+      marginTop: 8,
     });
 
     await act(async () => {
@@ -163,16 +163,16 @@ describe('PdfScreen', () => {
     );
 
     await view.findByTestId('pdf-viewer');
-    expect(view.getByTestId('pdf-viewport').props.style).toMatchObject({
-      height: height - 99,
+    expect(view.getByTestId('pdf-viewport').props.style[0]).toMatchObject({
+      height: height - 16,
       marginBottom: 8,
       marginHorizontal: 8,
-      marginTop: 91,
+      marginTop: 8,
       width: width - 16,
     });
   });
 
-  test('hides the overlay header and expands the PDF viewport', async () => {
+  test('hides the overlay header without resizing the PDF viewport', async () => {
     const view = await render(
       <SafeAreaProvider
         initialMetrics={{
@@ -193,7 +193,7 @@ describe('PdfScreen', () => {
     );
     expect(view.getByTestId('pdf-status-bar').props.hidden).toBe(false);
     expect(view.getByTestId('pdf-header').props.className).toContain('absolute');
-    const initialViewportStyle = view.getByTestId('pdf-viewport').props.style;
+    const initialViewportLayout = view.getByTestId('pdf-viewport').props.style[0];
 
     await act(async () => {
       pdf.props.onPageChanged(2);
@@ -201,10 +201,7 @@ describe('PdfScreen', () => {
 
     expect(view.getByTestId('stack-screen-options').props.options.headerShown).toBe(false);
     expect(view.getByTestId('pdf-status-bar').props.hidden).toBe(true);
-    expect(view.getByTestId('pdf-viewport').props.style).toMatchObject({
-      height: Dimensions.get('window').height - 16,
-      marginTop: 8,
-    });
+    expect(view.getByTestId('pdf-viewport').props.style[0]).toEqual(initialViewportLayout);
     const hiddenHeader = view.getByTestId('pdf-header', { includeHiddenElements: true });
     expect(hiddenHeader.props.pointerEvents).toBe('none');
     await act(() => new Promise((resolve) => setTimeout(resolve, 250)));
@@ -224,7 +221,7 @@ describe('PdfScreen', () => {
       opacity: 1,
       transform: [{ translateY: 0 }],
     });
-    expect(view.getByTestId('pdf-viewport').props.style).toEqual(initialViewportStyle);
+    expect(view.getByTestId('pdf-viewport').props.style[0]).toEqual(initialViewportLayout);
   });
 
   test('shows an idle-hiding page scrubber that jumps to the dragged page', async () => {

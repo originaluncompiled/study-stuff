@@ -43,7 +43,7 @@ describe('TimerRuntime', () => {
     jest.useRealTimers();
   });
 
-  test('opens rest automatically and supports pause, resume, and skip', async () => {
+  test('asks whether to continue after skipping rest', async () => {
     useTimerStore.setState({
       status: 'running',
       phase: 'study',
@@ -73,7 +73,13 @@ describe('TimerRuntime', () => {
     await fireEvent.press(view.getByRole('button', { name: 'Skip Rest' }));
 
     expect(view.queryByTestId('rest-timer-dialog')).toBeNull();
-    expect(useTimerStore.getState()).toMatchObject({ status: 'idle', phase: 'study' });
+    expect(view.getByRole('header', { name: 'Rest complete' })).toBeTruthy();
+    expect(view.getByRole('button', { name: 'Continue Studying' })).toBeTruthy();
+    expect(view.getByRole('button', { name: 'Stop Session' })).toBeTruthy();
+    expect(useTimerStore.getState()).toMatchObject({
+      status: 'awaitingContinuation',
+      phase: 'rest',
+    });
     expect(selectionAsyncMock).toHaveBeenCalledTimes(4);
   });
 

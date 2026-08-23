@@ -325,10 +325,14 @@ describe('timer store', () => {
 
     await useTimerStore.getState().skipRest(5 * 60_000);
     expect(useTimerStore.getState()).toMatchObject({
-      status: 'idle',
-      phase: 'study',
+      status: 'awaitingContinuation',
+      phase: 'rest',
       studyMinutes: 5,
       restMinutes: 10,
+    });
+    await expect(persistedState()).resolves.toMatchObject({
+      status: 'awaitingContinuation',
+      phase: 'rest',
     });
 
     await useTimerStore.getState().start(0);
@@ -352,8 +356,8 @@ describe('timer store', () => {
 
     await useTimerStore.getState().skipRest(15 * 60_000);
     expect(useTimerStore.getState()).toMatchObject({
-      status: 'idle',
-      phase: 'study',
+      status: 'awaitingContinuation',
+      phase: 'rest',
       studyMinutes: 5,
       restMinutes: 10,
     });

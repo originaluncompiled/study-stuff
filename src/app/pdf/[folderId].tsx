@@ -83,9 +83,7 @@ export default function PdfScreen() {
   const timerManagerVisible = timerSession !== null && timerManagerSession === timerSession;
   const headerTopInset = Math.max(insets.top - PDF_HEADER_VERTICAL_PADDING, 0);
   const headerHeight = headerTopInset + PDF_HEADER_CONTENT_HEIGHT;
-  const viewerTopMargin =
-    (headerVisible ? headerHeight : 0) +
-    (headerVisible ? PDF_HEADER_VERTICAL_PADDING : PDF_VIEWER_INSET);
+  const viewerHeaderOffset = headerHeight + PDF_HEADER_VERTICAL_PADDING - PDF_VIEWER_INSET;
   const scrubberTop = headerHeight + 12;
   const scrubberBottom = Math.max(insets.bottom, 12) + 12;
   const availableScrubberTravel = Math.max(
@@ -95,6 +93,9 @@ export default function PdfScreen() {
   const headerAnimatedStyle = useAnimatedStyle(() => ({
     opacity: headerProgress.get(),
     transform: [{ translateY: (headerProgress.get() - 1) * headerHeight }],
+  }));
+  const viewerAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: headerProgress.get() * viewerHeaderOffset }],
   }));
   const scrubberLabelAnimatedStyle = useAnimatedStyle(() => ({
     opacity: scrubberProgress.get(),
@@ -321,15 +322,18 @@ export default function PdfScreen() {
           onTouchEnd={finishPdfScroll}
           onTouchMove={beginPdfScroll}
           testID="pdf-viewer-container">
-          <View
+          <Animated.View
             testID="pdf-viewport"
-            style={{
-              width: Math.max(width - PDF_VIEWER_INSET * 2, 1),
-              height: Math.max(height - viewerTopMargin - PDF_VIEWER_INSET, 1),
-              marginBottom: PDF_VIEWER_INSET,
-              marginHorizontal: PDF_VIEWER_INSET,
-              marginTop: viewerTopMargin,
-            }}>
+            style={[
+              {
+                width: Math.max(width - PDF_VIEWER_INSET * 2, 1),
+                height: Math.max(height - PDF_VIEWER_INSET * 2, 1),
+                marginBottom: PDF_VIEWER_INSET,
+                marginHorizontal: PDF_VIEWER_INSET,
+                marginTop: PDF_VIEWER_INSET,
+              },
+              viewerAnimatedStyle,
+            ]}>
             <Pdf
               enablePaging={false}
               fitPolicy={0}
@@ -355,7 +359,7 @@ export default function PdfScreen() {
               }}
               trustAllCerts={false}
             />
-          </View>
+          </Animated.View>
           {loading ? (
             <View className="absolute inset-0 items-center justify-center bg-ink">
               <ActivityIndicator color={colors.purple} size="large" />
