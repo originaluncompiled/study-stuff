@@ -92,6 +92,18 @@ describe('PdfScreen', () => {
     await act(async () => {
       pdf.props.onPageChanged(2);
     });
+    await fireEvent(view.getByTestId('pdf-viewer-container'), 'touchStart', {
+      nativeEvent: { pageY: 200 },
+    });
+    await fireEvent(view.getByTestId('pdf-viewer-container'), 'touchMove', {
+      nativeEvent: { pageY: 196 },
+    });
+    await fireEvent(view.getByTestId('pdf-viewer-container'), 'touchMove', {
+      nativeEvent: { pageY: 192 },
+    });
+    await fireEvent(view.getByTestId('pdf-viewer-container'), 'touchMove', {
+      nativeEvent: { pageY: 188 },
+    });
     expect(view.queryByRole('button', { name: /Open timer controls/ })).toBeNull();
     expect(view.getByTestId('pdf-header', { includeHiddenElements: true }).props.pointerEvents).toBe(
       'none',
@@ -104,8 +116,18 @@ describe('PdfScreen', () => {
       transform: [{ translateY: -85 }],
     });
 
-    await act(async () => {
-      pdf.props.onPageChanged(1);
+    await fireEvent(view.getByTestId('pdf-viewer-container'), 'touchEnd');
+    await fireEvent(view.getByTestId('pdf-viewer-container'), 'touchStart', {
+      nativeEvent: { pageY: 188 },
+    });
+    await fireEvent(view.getByTestId('pdf-viewer-container'), 'touchMove', {
+      nativeEvent: { pageY: 192 },
+    });
+    await fireEvent(view.getByTestId('pdf-viewer-container'), 'touchMove', {
+      nativeEvent: { pageY: 196 },
+    });
+    await fireEvent(view.getByTestId('pdf-viewer-container'), 'touchMove', {
+      nativeEvent: { pageY: 200 },
     });
 
     await fireEvent.press(view.getByRole('button', { name: /Open timer controls/ }));
@@ -199,6 +221,14 @@ describe('PdfScreen', () => {
       pdf.props.onPageChanged(2);
     });
 
+    expect(view.getByTestId('pdf-status-bar').props.hidden).toBe(false);
+    await fireEvent(view.getByTestId('pdf-viewer-container'), 'touchStart', {
+      nativeEvent: { pageY: 200 },
+    });
+    await fireEvent(view.getByTestId('pdf-viewer-container'), 'touchMove', {
+      nativeEvent: { pageY: 180 },
+    });
+
     expect(view.getByTestId('stack-screen-options').props.options.headerShown).toBe(false);
     expect(view.getByTestId('pdf-status-bar').props.hidden).toBe(true);
     expect(view.getByTestId('pdf-viewport').props.style[0]).toEqual(initialViewportLayout);
@@ -210,8 +240,12 @@ describe('PdfScreen', () => {
       transform: [{ translateY: -85 }],
     });
 
-    await act(async () => {
-      pdf.props.onPageChanged(1);
+    await fireEvent(view.getByTestId('pdf-viewer-container'), 'touchEnd');
+    await fireEvent(view.getByTestId('pdf-viewer-container'), 'touchStart', {
+      nativeEvent: { pageY: 180 },
+    });
+    await fireEvent(view.getByTestId('pdf-viewer-container'), 'touchMove', {
+      nativeEvent: { pageY: 200 },
     });
     const visibleHeader = view.getByTestId('pdf-header');
     expect(view.getByTestId('pdf-status-bar').props.hidden).toBe(false);
@@ -242,13 +276,17 @@ describe('PdfScreen', () => {
     expect(view.getByTestId('pdf-page-scrubber').props.pointerEvents).toBe('box-none');
     expect(view.getByTestId('pdf-page-scrubber-progress').props.className).toContain('h-[29px]');
     expect(view.getByTestId('pdf-page-scrubber-label').props.className).toContain('bg-white/45');
+    expect(view.getByTestId('pdf-page-scrubber-label').props.className).toContain('right-3');
+    expect(view.getByTestId('pdf-page-scrubber-progress').props.className).toContain('mr-1');
     expect(view.getByTestId('pdf-page-scrubber-handle').props.className).toContain(
       'h-12 w-[76px]',
     );
     expect(view.getByTestId('pdf-page-scrubber-handle').props.className).not.toContain('border');
     expect(view.getByRole('adjustable', { name: 'Page 1 of 10' })).toBeTruthy();
 
-    await fireEvent(view.getByTestId('pdf-viewer-container'), 'touchMove');
+    await fireEvent(view.getByTestId('pdf-viewer-container'), 'touchMove', {
+      nativeEvent: { pageY: 200 },
+    });
     await fireEvent(view.getByTestId('pdf-viewer-container'), 'touchEnd');
 
     await act(async () => {

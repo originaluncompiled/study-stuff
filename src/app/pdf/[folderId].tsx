@@ -2,7 +2,13 @@ import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { AlertCircle, ChevronLeft, Clock3, Coffee, Pause } from 'lucide-react-native';
 import { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Pressable, View, useWindowDimensions } from 'react-native';
+import {
+  ActivityIndicator,
+  Pressable,
+  View,
+  useWindowDimensions,
+  type GestureResponderEvent,
+} from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Pdf, { type PdfRef } from 'react-native-pdf';
 import Animated, {
@@ -19,16 +25,13 @@ import { AppText } from '@/components/app-text';
 import { TimerManagerSheet } from '@/components/timer-manager-sheet';
 import { colors } from '@/constants/theme';
 import { normalizeRelativePath } from '@/lib/paths';
-import {
-  getPdfHeaderVisibility,
-  getPdfScrubberOffset,
-  getPdfScrubberPage,
-} from '@/lib/pdf-viewer';
+import { getPdfScrubberOffset, getPdfScrubberPage } from '@/lib/pdf-viewer';
 import { formatTimer } from '@/lib/timer';
 import { getPdfFile } from '@/services/library-files';
 import { useTimerStore } from '@/store/timer-store';
 
 const PDF_HEADER_CONTENT_HEIGHT = 44;
+const PDF_HEADER_SCROLL_THRESHOLD = 12;
 const PDF_HEADER_VERTICAL_PADDING = 6;
 const PDF_TIMER_PILL_GAP = 12;
 const PDF_SCRUBBER_HEIGHT = 48;
@@ -57,6 +60,8 @@ export default function PdfScreen() {
   const [pageRequest, setPageRequest] = useState<{ id: number; page: number } | null>(null);
   const pdfRef = useRef<PdfRef>(null);
   const previousPage = useRef(1);
+  const previousTouchY = useRef<number | null>(null);
+  const directionalTouchTravel = useRef(0);
   const headerProgress = useSharedValue(1);
   const scrubberProgress = useSharedValue(0);
   const scrubberOffset = useSharedValue(0);
@@ -192,8 +197,48 @@ export default function PdfScreen() {
   }
 
   function finishPdfScroll() {
+    previousTouchY.current = null;
+    directionalTouchTravel.current = 0;
     setPdfScrolling(false);
     setScrubberIdleRevision((revision) => revision + 1);
+  }
+
+  function beginPdfTouch(event: GestureResponderEvent) {
+    previousTouchY.current = event.nativeEvent.pageY;
+    directionalTouchTravel.current = 0;
+  }
+
+  function trackPdfScroll(event: GestureResponderEvent) {
+    if (scrubbing.get()) {
+      return;
+    }
+
+    beginPdfScroll();
+    const touchY = event.nativeEvent.pageY;
+    const lastTouchY = previousTouchY.current;
+    previousTouchY.current = touchY;
+    if (lastTouchY === null) {
+      return;
+    }
+
+    const delta = touchY - lastTouchY;
+    if (delta === 0) {
+      return;
+    }
+
+    if (
+      directionalTouchTravel.current !== 0 &&
+      Math.sign(directionalTouchTravel.current) !== Math.sign(delta)
+    ) {
+      directionalTouchTravel.current = delta;
+    } else {
+      directionalTouchTravel.current += delta;
+    }
+
+    if (Math.abs(directionalTouchTravel.current) >= PDF_HEADER_SCROLL_THRESHOLD) {
+      setHeaderVisible(directionalTouchTravel.current > 0);
+      directionalTouchTravel.current = 0;
+    }
   }
 
   function beginPageScrub() {
@@ -237,9 +282,6 @@ export default function PdfScreen() {
       setNumberOfPages(pageCount);
       scrubberPageCount.set(pageCount);
     }
-    setHeaderVisible((currentVisibility) =>
-      getPdfHeaderVisibility(lastPage, page, currentVisibility),
-    );
     if (page !== lastPage) {
       showScrubberUntilIdle();
     }
@@ -331,7 +373,8 @@ export default function PdfScreen() {
           className="flex-1"
           onTouchCancel={finishPdfScroll}
           onTouchEnd={finishPdfScroll}
-          onTouchMove={beginPdfScroll}
+          onTouchMove={trackPdfScroll}
+          onTouchStart={beginPdfTouch}
           testID="pdf-viewer-container">
           <Animated.View
             testID="pdf-viewport"
@@ -415,7 +458,7 @@ export default function PdfScreen() {
                   <Animated.View
                     pointerEvents="none"
                     testID="pdf-page-scrubber-label"
-                    className="absolute right-2 rounded-lg bg-white/45 px-2 py-1"
+                    className="absolute right-3 rounded-lg bg-white/45 px-2 py-1"
                     style={[
                       { transformOrigin: 'right center' },
                       scrubberLabelAnimatedStyle,
