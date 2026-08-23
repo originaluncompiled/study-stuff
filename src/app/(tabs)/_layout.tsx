@@ -11,6 +11,7 @@ export default function TabsLayout() {
 
   return (
     <Tabs
+      detachInactiveScreens={false}
       tabBar={({ navigation, state }) => (
         <MainTabBar
           activeRoute={state.routes[state.index].name as MainTabRoute}

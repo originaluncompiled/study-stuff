@@ -11,6 +11,7 @@ const mockDispatch = jest.fn();
 const mockEmit = jest.fn(() => ({ defaultPrevented: false }));
 const mockNavigate = jest.fn();
 let mockTabsProps: {
+  detachInactiveScreens?: boolean;
   screenLayout?: unknown;
   screenOptions?: {
     animation?: string;
@@ -37,6 +38,7 @@ const mockState = {
 
 jest.mock('expo-router', () => {
   function Tabs(props: {
+    detachInactiveScreens?: boolean;
     screenLayout?: unknown;
     screenOptions?: typeof mockTabsProps.screenOptions;
     tabBar: (props: object) => React.ReactNode;
@@ -91,6 +93,7 @@ describe('main tab navigation', () => {
     const width = Dimensions.get('window').width;
 
     expect(mockTabsProps.screenOptions?.animation).toBeUndefined();
+    expect(mockTabsProps.detachInactiveScreens).toBe(false);
     expect(mockTabsProps.screenOptions?.headerShown).toBe(false);
     expect(mockTabsProps.screenOptions?.transitionSpec).toEqual({
       animation: 'timing',
@@ -125,7 +128,9 @@ describe('main tab navigation', () => {
     expect(view.getByRole('tab', { name: 'Timer' }).props.className).toContain('px-[15px]');
     expect(view.getByRole('tab', { name: 'Settings' }).props.className).toContain('px-[15px]');
     expect(view.getByRole('tab', { name: 'Library' }).props.className).not.toContain('w-14');
+    expect(view.getByRole('tab', { name: 'Library' }).props.className).toContain('bg-ink');
     expect(view.getByRole('tab', { name: 'Timer' }).props.className).toContain('w-14');
+    expect(view.getByRole('tab', { name: 'Timer' }).props.className).toContain('bg-paper-raised');
     expect(view.getByRole('tab', { name: 'Settings' }).props.className).toContain('w-14');
     expect(view.getByTestId('library-tab-label').props.className).toBe('px-2');
     expect(view.queryByTestId('timer-tab-label')).toBeNull();
@@ -147,6 +152,7 @@ describe('main tab navigation', () => {
     expect(view.getByTestId('settings-tab-label').props.className).toBe('px-2');
     expect(view.getByRole('tab', { name: 'Library' }).props.className).toContain('w-14');
     expect(view.getByRole('tab', { name: 'Settings' }).props.className).not.toContain('w-14');
+    expect(view.getByRole('tab', { name: 'Settings' }).props.className).toContain('bg-ink');
 
     mockState.index = 0;
     await view.rerender(renderTabs());

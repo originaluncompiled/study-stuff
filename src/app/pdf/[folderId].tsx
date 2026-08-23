@@ -29,6 +29,7 @@ import { getPdfFile } from '@/services/library-files';
 import { useTimerStore } from '@/store/timer-store';
 
 const PDF_HEADER_CONTENT_HEIGHT = 44;
+const PDF_HEADER_VERTICAL_PADDING = 6;
 const PDF_TIMER_PILL_GAP = 12;
 const PDF_SCRUBBER_HEIGHT = 48;
 const PDF_SCRUBBER_IDLE_DELAY = 1200;
@@ -80,9 +81,11 @@ export default function PdfScreen() {
         ? `${timerPhase}:paused:${timerRemainingMs}`
         : null;
   const timerManagerVisible = timerSession !== null && timerManagerSession === timerSession;
-  const headerTopInset = Math.max(insets.top - PDF_VIEWER_INSET, 0);
+  const headerTopInset = Math.max(insets.top - PDF_HEADER_VERTICAL_PADDING, 0);
   const headerHeight = headerTopInset + PDF_HEADER_CONTENT_HEIGHT;
-  const viewerTopMargin = (headerVisible ? headerHeight : 0) + PDF_VIEWER_INSET;
+  const viewerTopMargin =
+    (headerVisible ? headerHeight : 0) +
+    (headerVisible ? PDF_HEADER_VERTICAL_PADDING : PDF_VIEWER_INSET);
   const scrubberTop = headerHeight + 12;
   const scrubberBottom = Math.max(insets.bottom, 12) + 12;
   const availableScrubberTravel = Math.max(
@@ -397,7 +400,7 @@ export default function PdfScreen() {
                   <Animated.View
                     pointerEvents="none"
                     testID="pdf-page-scrubber-label"
-                    className="absolute right-2 rounded-lg bg-white/10 px-2 py-1"
+                    className="absolute right-2 rounded-lg bg-white/45 px-2 py-1"
                     style={[
                       { transformOrigin: 'right center' },
                       scrubberLabelAnimatedStyle,

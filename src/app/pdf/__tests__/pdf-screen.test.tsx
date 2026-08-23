@@ -81,9 +81,9 @@ describe('PdfScreen', () => {
     expect(timerPill.props.className).toContain('bg-purple');
     expect(timerPill.props.className).toContain('h-11');
     expect(view.getByTestId('pdf-timer-running-icon')).toBeTruthy();
-    expect(view.getByTestId('pdf-header')).toHaveStyle({ height: 83 });
+    expect(view.getByTestId('pdf-header')).toHaveStyle({ height: 85 });
     expect(view.getByTestId('pdf-timer-pill').props.className).toContain('absolute');
-    expect(view.getByTestId('pdf-timer-pill')).toHaveStyle({ top: 95 });
+    expect(view.getByTestId('pdf-timer-pill')).toHaveStyle({ top: 97 });
     expect(view.getByTestId('pdf-viewport').props.style).toMatchObject({
       height: Dimensions.get('window').height - 99,
       marginTop: 91,
@@ -101,7 +101,7 @@ describe('PdfScreen', () => {
     await act(() => new Promise((resolve) => setTimeout(resolve, 250)));
     expect(hiddenTimerPill).toHaveAnimatedStyle({
       opacity: 0,
-      transform: [{ translateY: -83 }],
+      transform: [{ translateY: -85 }],
     });
 
     await act(async () => {
@@ -210,7 +210,7 @@ describe('PdfScreen', () => {
     await act(() => new Promise((resolve) => setTimeout(resolve, 250)));
     expect(hiddenHeader).toHaveAnimatedStyle({
       opacity: 0,
-      transform: [{ translateY: -83 }],
+      transform: [{ translateY: -85 }],
     });
 
     await act(async () => {
@@ -244,6 +244,7 @@ describe('PdfScreen', () => {
     });
     expect(view.getByTestId('pdf-page-scrubber').props.pointerEvents).toBe('box-none');
     expect(view.getByTestId('pdf-page-scrubber-progress').props.className).toContain('h-[29px]');
+    expect(view.getByTestId('pdf-page-scrubber-label').props.className).toContain('bg-white/45');
     expect(view.getByTestId('pdf-page-scrubber-handle').props.className).toContain(
       'h-12 w-[76px]',
     );

@@ -79,7 +79,7 @@ export function MainTabBar({
                 route === 'timer' && timerRunning ? { text: 'Timer running' } : undefined
               }
               className={`min-h-14 flex-row items-center justify-center overflow-hidden rounded-full border-2 border-ink px-[15px] active:opacity-90 ${
-                selected ? '' : 'w-14'
+                selected ? 'bg-ink' : 'w-14 bg-paper-raised'
               }`}
               layout={tabTransition}
               onPress={() => onPress(route)}>

@@ -238,12 +238,14 @@ export default function TimerScreen() {
               />
               <View className="flex-1 rounded-full border-2 border-ink bg-purple p-3">
                 <View className="flex-1 items-center justify-center rounded-full border-2 border-ink bg-paper-raised px-4">
-                  <AppText
-                    accessibilityLabel={`Current phase, ${phase === 'study' ? 'Studying' : 'Resting'}`}
-                    className="absolute top-4 text-[16px] leading-5 text-purple"
-                    variant="label">
-                    {phase === 'study' ? 'Studying' : 'Resting'}
-                  </AppText>
+                  {status === 'running' || status === 'paused' ? (
+                    <AppText
+                      accessibilityLabel={`Current phase, ${phase === 'study' ? 'Studying' : 'Resting'}`}
+                      className="absolute top-4 text-[16px] leading-5 text-purple"
+                      variant="label">
+                      {phase === 'study' ? 'Studying' : 'Resting'}
+                    </AppText>
+                  ) : null}
                   <AppText
                     accessibilityLabel={`${phase === 'study' ? 'Study' : 'Rest'} time remaining, ${formatTimer(secondsRemaining)}`}
                     adjustsFontSizeToFit

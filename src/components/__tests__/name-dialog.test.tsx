@@ -21,7 +21,6 @@ describe('NameDialog', () => {
   test('centers the dialog within the top half of the screen', async () => {
     const view = await render(
       <NameDialog
-        centerInTopHalf
         onClose={jest.fn()}
         onSubmit={jest.fn()}
         title="Name Folder"
@@ -40,6 +39,7 @@ describe('NameDialog', () => {
   test('centers a standard dialog within the height remaining above the keyboard', async () => {
     const view = await render(
       <NameDialog
+        centerInTopHalf={false}
         onClose={jest.fn()}
         onSubmit={jest.fn()}
         title="Name Folder"

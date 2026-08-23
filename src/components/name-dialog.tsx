@@ -24,7 +24,7 @@ type NameDialogProps = {
 };
 
 export function NameDialog({
-  centerInTopHalf = false,
+  centerInTopHalf = true,
   confirmLabel = 'Create',
   initialValue = '',
   inputLabel = 'Folder name',

@@ -71,9 +71,10 @@ describe('TimerScreen', () => {
     jest.setSystemTime(new Date('2026-08-22T12:00:00Z'));
     const view = await renderTimer();
 
-    expect(view.getByText('Studying')).toBeTruthy();
+    expect(view.queryByText('Studying')).toBeNull();
     expect(view.getByText('5m')).toBeTruthy();
     await fireEvent.press(view.getByRole('button', { name: 'Start Timer' }));
+    expect(view.getByText('Studying')).toBeTruthy();
     expect(view.getByRole('button', { name: 'Pause Timer' })).toBeTruthy();
     expect(view.queryByText('5m')).toBeNull();
 
@@ -103,7 +104,7 @@ describe('TimerScreen', () => {
 
     await fireEvent.press(view.getByRole('button', { name: 'Reset Timer' }));
     expect(view.getByText('25:00')).toBeTruthy();
-    expect(view.getByText('Studying')).toBeTruthy();
+    expect(view.queryByText('Studying')).toBeNull();
     expect(view.getByText('5m')).toBeTruthy();
     expect(view.getByRole('button', { name: 'Start Timer' })).toBeTruthy();
     expect(view.queryByRole('button', { name: 'Reset Timer' })).toBeNull();
@@ -136,6 +137,7 @@ describe('TimerScreen', () => {
     });
     expect(view.getByLabelText('Rest time remaining, 0:00')).toBeTruthy();
     expect(view.getByRole('button', { name: 'Continue Timer' })).toBeTruthy();
+    expect(view.queryByText('Resting')).toBeNull();
     expect(useTimerStore.getState().status).toBe('awaitingContinuation');
 
     await view.unmount();
