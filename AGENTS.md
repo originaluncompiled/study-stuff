@@ -7,6 +7,14 @@ This file applies to the whole repository. Use it to keep design and implementat
 - This project uses Expo SDK 57. Read the exact versioned documentation at https://docs.expo.dev/versions/v57.0.0/ before changing Expo or React Native code.
 - Prefer the smallest change that fits the current app and visual language. Extend existing components before introducing a second design system.
 
+## Engineering Priorities
+
+- Always look for the simplest solution that fully meets the requirement. Simpler implementations are the default because they have fewer interactions, failure modes, and maintenance costs.
+- Before custom-building complex behavior, inspect the existing dependencies and platform APIs for a maintained solution. Prefer an already-installed package or library over recreating behavior it already solves.
+- Do not add or install a package without the user's explicit approval. First state which package is needed, why the current dependencies are insufficient, and whether it requires native configuration or a development-client rebuild.
+- Avoid custom navigation, gesture, animation, persistence, and platform-integration machinery when a compatible maintained library already provides the required behavior.
+- Add abstractions, workarounds, or compatibility layers only when a concrete requirement makes the simpler approach insufficient.
+
 ## Visual Direction
 
 The visual language is warm editorial stationery with bold, playful neo-brutalist accents.

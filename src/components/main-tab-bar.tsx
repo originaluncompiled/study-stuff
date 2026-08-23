@@ -38,7 +38,7 @@ export function MainTabBar({
 
   return (
     <View
-      className="absolute bottom-0 left-0 right-0 items-center px-6 pt-2"
+      className="absolute bottom-0 left-0 right-0 z-10 items-center px-6 pt-2"
       pointerEvents="box-none"
       style={{ paddingBottom: Math.max(insets.bottom, 12) }}>
       <View className="flex-row items-center gap-2">

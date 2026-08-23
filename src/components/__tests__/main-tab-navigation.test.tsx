@@ -11,19 +11,9 @@ const mockEmit = jest.fn(() => ({ defaultPrevented: false }));
 const mockNavigate = jest.fn();
 let mockTimerScreenOptions: { lazy?: boolean; title?: string } | undefined;
 let mockTabsProps: {
-  detachInactiveScreens?: boolean;
-  screenLayout?: unknown;
   screenOptions?: {
-    animation?: string;
-    headerShown?: boolean;
-    sceneStyleInterpolator?: (props: {
-      current: {
-        progress: {
-          interpolate: (config: { inputRange: number[]; outputRange: number[] }) => unknown;
-        };
-      };
-    }) => unknown;
-    transitionSpec?: { animation?: string; config?: { duration?: number } };
+    animationEnabled?: boolean;
+    swipeEnabled?: boolean;
   };
 };
 const mockState = {
@@ -36,14 +26,12 @@ const mockState = {
   ],
 };
 
-jest.mock('expo-router', () => {
-  function Tabs(props: {
+jest.mock('expo-router/js-top-tabs', () => {
+  function TopTabs(props: {
     children?: React.ReactElement<{
       name: string;
       options?: { lazy?: boolean; title?: string };
     }>[];
-    detachInactiveScreens?: boolean;
-    screenLayout?: unknown;
     screenOptions?: typeof mockTabsProps.screenOptions;
     tabBar: (props: object) => React.ReactNode;
   }) {
@@ -63,9 +51,9 @@ jest.mock('expo-router', () => {
     return null;
   }
 
-  Tabs.Screen = Screen;
+  TopTabs.Screen = Screen;
 
-  return { Tabs };
+  return { TopTabs };
 });
 
 describe('main tab navigation', () => {
@@ -81,7 +69,7 @@ describe('main tab navigation', () => {
     });
   });
 
-  it('uses the default tab scene lifecycle without content animation', async () => {
+  it('uses one horizontal pager for taps and swipes', async () => {
     await render(
       <SafeAreaProvider
         initialMetrics={{
@@ -92,13 +80,11 @@ describe('main tab navigation', () => {
       </SafeAreaProvider>,
     );
 
-    expect(mockTabsProps.screenOptions?.animation).toBeUndefined();
-    expect(mockTabsProps.detachInactiveScreens).toBeUndefined();
     expect(mockTimerScreenOptions).toEqual({ title: 'Timer' });
-    expect(mockTabsProps.screenOptions?.headerShown).toBe(false);
-    expect(mockTabsProps.screenOptions?.sceneStyleInterpolator).toBeUndefined();
-    expect(mockTabsProps.screenOptions?.transitionSpec).toBeUndefined();
-    expect(mockTabsProps.screenLayout).toBeUndefined();
+    expect(mockTabsProps.screenOptions).toEqual({
+      animationEnabled: true,
+      swipeEnabled: true,
+    });
   });
 
   it('updates the selected tab background when the active route changes', async () => {

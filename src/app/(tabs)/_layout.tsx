@@ -1,16 +1,19 @@
-import { Tabs } from 'expo-router';
+import { TopTabs, type MaterialTopTabBarProps } from 'expo-router/js-top-tabs';
 import { CommonActions } from 'expo-router/react-navigation';
+import { useReducedMotion } from 'react-native-reanimated';
 
 import { MainTabBar, type MainTabRoute } from '@/components/main-tab-bar';
 
 export default function TabsLayout() {
+  const reduceMotion = useReducedMotion();
+
   return (
-    <Tabs
-      tabBar={({ navigation, state }) => (
+    <TopTabs
+      tabBar={({ navigation, state }: MaterialTopTabBarProps) => (
         <MainTabBar
           activeRoute={state.routes[state.index].name as MainTabRoute}
           onPress={(routeName) => {
-            const route = state.routes.find(({ name }) => name === routeName);
+            const route = state.routes.find(({ name }: { name: string }) => name === routeName);
             if (!route) {
               return;
             }
@@ -29,11 +32,12 @@ export default function TabsLayout() {
         />
       )}
       screenOptions={{
-        headerShown: false,
+        animationEnabled: !reduceMotion,
+        swipeEnabled: true,
       }}>
-      <Tabs.Screen name="(library)" options={{ title: 'Library' }} />
-      <Tabs.Screen name="timer" options={{ title: 'Timer' }} />
-      <Tabs.Screen name="settings" options={{ title: 'Settings' }} />
-    </Tabs>
+      <TopTabs.Screen name="(library)" options={{ title: 'Library' }} />
+      <TopTabs.Screen name="timer" options={{ title: 'Timer' }} />
+      <TopTabs.Screen name="settings" options={{ title: 'Settings' }} />
+    </TopTabs>
   );
 }

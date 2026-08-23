@@ -33,6 +33,12 @@ After the development client is installed, start Metro with:
 npm start
 ```
 
+### Engineering Principles
+
+- Use the simplest implementation that fully solves the problem; fewer moving parts are more robust.
+- Prefer the project's installed, maintained packages and platform APIs over custom implementations of solved behavior.
+- Ask for explicit approval before installing any new dependency, including an explanation of why it is needed and whether it changes the native build.
+
 ## Checks
 
 ```bash
