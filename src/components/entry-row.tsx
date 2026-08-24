@@ -1,4 +1,5 @@
-import { FileText, Folder, MoreVertical, Star } from 'lucide-react-native';
+import { FileText, Folder, MoreHorizontal, Star } from 'lucide-react-native';
+import { useState } from 'react';
 import { Pressable, View } from 'react-native';
 
 import { AppText } from '@/components/app-text';
@@ -16,16 +17,22 @@ export function EntryRow({
   onMenu: () => void;
   onPress: () => void;
 }) {
+  const [pressed, setPressed] = useState(false);
+  const [menuPressed, setMenuPressed] = useState(false);
   const isDirectory = entry.kind === 'directory';
   const Icon = isDirectory ? Folder : FileText;
   const detail = isDirectory ? formatChildCount(entry.childCount) : formatFileSize(entry.size);
   return (
-    <View className="mb-3 flex-row items-center rounded-2xl border border-line bg-paper-raised">
+    <View
+      className="mb-3 flex-row items-stretch overflow-hidden rounded-[22px] border-2 border-ink"
+      style={{ backgroundColor: pressed ? '#EEE4CF' : colors.paperRaised }}>
       <Pressable
         accessibilityLabel={`Open ${entry.name}${favourite ? ', Favourited' : ''}${isDirectory && entry.childCount !== null ? `, ${detail}` : ''}`}
         accessibilityRole="button"
-        className="min-h-[76px] flex-1 flex-row items-center px-4 py-3 active:bg-[#EEE4CF]"
-        onPress={onPress}>
+        className="min-h-[80px] flex-1 flex-row items-center px-4 py-3"
+        onPress={onPress}
+        onPressIn={() => setPressed(true)}
+        onPressOut={() => setPressed(false)}>
         {favourite ? (
           <View accessible={false} className="mr-2 items-center justify-center">
             <Star color={colors.purple} fill={colors.purple} size={20} />
@@ -43,14 +50,25 @@ export function EntryRow({
           </AppText>
         </View>
       </Pressable>
-      <Pressable
-        accessibilityLabel={`Manage ${entry.name}`}
-        accessibilityRole="button"
-        className="mr-2 h-12 w-12 items-center justify-center rounded-full active:bg-line/40"
-        hitSlop={6}
-        onPress={onMenu}>
-        <MoreVertical color={colors.ink} size={22} />
-      </Pressable>
+      <View className="w-14 items-center justify-center">
+        <Pressable
+          accessibilityLabel={`Manage ${entry.name}`}
+          accessibilityRole="button"
+          hitSlop={6}
+          onPress={onMenu}
+          onPressIn={() => setMenuPressed(true)}
+          onPressOut={() => setMenuPressed(false)}
+          style={{
+            alignItems: 'center',
+            backgroundColor: menuPressed ? '#EEE4CF' : 'transparent',
+            borderRadius: 22,
+            height: 44,
+            justifyContent: 'center',
+            width: 44,
+          }}>
+          <MoreHorizontal color={colors.ink} size={23} />
+        </Pressable>
+      </View>
     </View>
   );
 }

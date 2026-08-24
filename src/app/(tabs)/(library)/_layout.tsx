@@ -14,7 +14,7 @@ export default function LibraryStackLayout() {
         headerStyle: { backgroundColor: colors.paper },
         headerTintColor: colors.ink,
         headerShadowVisible: false,
-        headerTitleStyle: { fontFamily: 'DMSans_600SemiBold' },
+        headerTitleStyle: { fontFamily: 'Fraunces_700Bold' },
       }}>
       <Stack.Screen name="index" options={{ headerShown: false }} />
       <Stack.Screen name="folder/[folderId]" />

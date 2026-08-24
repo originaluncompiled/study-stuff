@@ -1,6 +1,6 @@
 import * as Haptics from 'expo-haptics';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { FilePlus2, FolderPlus, Pencil, Plus, Star, Trash2 } from 'lucide-react-native';
+import { ChevronRight, FilePlus2, FolderPlus, Pencil, Plus, Star, Trash2 } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, FlatList, Pressable, ScrollView, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -58,7 +58,10 @@ export default function FolderScreen() {
     pathError = getErrorMessage(error);
   }
 
-  const title = currentPath.split('/').at(-1) || folder?.name || 'Folder';
+  const pathSegments = currentPath.split('/').filter(Boolean);
+  const title = pathSegments.at(-1) || folder?.name || 'Folder';
+  const breadcrumbSegments =
+    folder && pathSegments.length > 0 ? [folder.name, ...pathSegments.slice(0, -1)] : [];
 
   useEffect(() => {
     const timeout = setTimeout(() => {
@@ -242,25 +245,6 @@ export default function FolderScreen() {
         }}
       />
 
-      {folder ? (
-        <ScrollView
-          horizontal
-          className="max-h-12 border-b border-line"
-          contentContainerClassName="items-center px-5"
-          showsHorizontalScrollIndicator={false}>
-          {[folder.name, ...currentPath.split('/').filter(Boolean)].map((segment, index, all) => (
-            <View className="flex-row items-center" key={`${segment}-${index}`}>
-              {index > 0 ? <AppText className="mx-2 text-muted">/</AppText> : null}
-              <AppText
-                variant={index === all.length - 1 ? 'label' : 'caption'}
-                className={index === all.length - 1 ? 'text-purple' : ''}>
-                {segment}
-              </AppText>
-            </View>
-          ))}
-        </ScrollView>
-      ) : null}
-
       <View className="flex-1" pointerEvents={addingPdfs ? 'none' : 'auto'}>
         {error ? (
           <View className="m-5 rounded-2xl border border-danger bg-paper-raised px-5 py-4">
@@ -281,10 +265,31 @@ export default function FolderScreen() {
             keyExtractor={(entry) => entry.relativePath}
             contentContainerStyle={{
               flexGrow: 1,
-              padding: 20,
-              paddingBottom: getMainTabBarHeight(insets.bottom) + 20,
+              paddingHorizontal: 20,
+              paddingTop: breadcrumbSegments.length > 0 ? 8 : 12,
+              paddingBottom: getMainTabBarHeight(insets.bottom),
             }}
             showsVerticalScrollIndicator={false}
+            ListHeaderComponent={
+              breadcrumbSegments.length > 0 ? (
+                <ScrollView
+                  horizontal
+                  className="mb-3"
+                  contentContainerClassName="items-center"
+                  showsHorizontalScrollIndicator={false}>
+                  {breadcrumbSegments.map((segment, index) => (
+                    <View className="flex-row items-center" key={`${segment}-${index}`}>
+                      {index > 0 ? (
+                        <ChevronRight className="mx-1.5" color={colors.muted} size={16} />
+                      ) : null}
+                      <AppText variant="caption" className="font-sans-medium">
+                        {segment}
+                      </AppText>
+                    </View>
+                  ))}
+                </ScrollView>
+              ) : null
+            }
             ListEmptyComponent={
               <View className="flex-1 items-center justify-center px-7 pb-16">
                 <View className="h-20 w-20 items-center justify-center rounded-[26px] bg-purple">
@@ -338,6 +343,9 @@ export default function FolderScreen() {
         onDismiss={() => setActionTarget(null)}>
         <ActionRow
           icon={Star}
+          iconFill={
+            actionTarget && favouritePaths.has(actionTarget.relativePath) ? colors.ink : undefined
+          }
           label={
             actionTarget && favouritePaths.has(actionTarget.relativePath)
               ? 'Unfavourite'

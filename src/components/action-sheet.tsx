@@ -221,11 +221,19 @@ type ActionRowProps = {
   destructive?: boolean;
   description?: string;
   icon: LucideIcon;
+  iconFill?: string;
   label: string;
   onPress: () => void;
 };
 
-export function ActionRow({ destructive, description, icon: Icon, label, onPress }: ActionRowProps) {
+export function ActionRow({
+  destructive,
+  description,
+  icon: Icon,
+  iconFill,
+  label,
+  onPress,
+}: ActionRowProps) {
   const color = destructive ? colors.danger : colors.ink;
   return (
     <Pressable
@@ -233,7 +241,12 @@ export function ActionRow({ destructive, description, icon: Icon, label, onPress
       className="flex-row items-center rounded-2xl border border-line bg-paper px-4 py-4 active:bg-[#EEE4CF]"
       onPress={onPress}>
       <View className="mr-4 h-11 w-11 items-center justify-center rounded-xl bg-paper-raised">
-        <Icon color={color} size={23} strokeWidth={2.1} />
+        <Icon
+          color={color}
+          size={23}
+          strokeWidth={2.1}
+          {...(iconFill ? { fill: iconFill } : {})}
+        />
       </View>
       <View className="flex-1">
         <AppText variant="label" style={{ color }}>
