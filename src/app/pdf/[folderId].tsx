@@ -32,12 +32,11 @@ import { useTimerStore } from '@/store/timer-store';
 
 const PDF_HEADER_CONTENT_HEIGHT = 44;
 const PDF_HEADER_SCROLL_THRESHOLD = 12;
-const PDF_HEADER_VERTICAL_PADDING = 6;
 const PDF_TIMER_PILL_GAP = 12;
 const PDF_SCRUBBER_HEIGHT = 48;
 const PDF_SCRUBBER_IDLE_DELAY = 1200;
 const PDF_SCRUBBER_WIDTH = 76;
-const PDF_VIEWER_INSET = 8;
+const PDF_PAGE_INSET = 8;
 
 export default function PdfScreen() {
   const params = useLocalSearchParams<'/pdf/[folderId]'>();
@@ -87,9 +86,10 @@ export default function PdfScreen() {
         ? `${timerPhase}:paused:${timerRemainingMs}`
         : null;
   const timerManagerVisible = timerSession !== null && timerManagerSession === timerSession;
-  const headerTopInset = Math.max(insets.top - PDF_HEADER_VERTICAL_PADDING, 0);
+  const headerTopInset = insets.top;
   const headerHeight = headerTopInset + PDF_HEADER_CONTENT_HEIGHT;
-  const viewerHeaderOffset = headerHeight + PDF_HEADER_VERTICAL_PADDING - PDF_VIEWER_INSET;
+  const viewerTopPadding = headerVisible ? headerHeight : 0;
+  const initialPdfScale = Math.max((width - PDF_PAGE_INSET * 2) / width, 0.1);
   const scrubberTop = headerHeight + 12;
   const scrubberBottom = Math.max(insets.bottom, 12) + 12;
   const availableScrubberTravel = Math.max(
@@ -99,9 +99,6 @@ export default function PdfScreen() {
   const headerAnimatedStyle = useAnimatedStyle(() => ({
     opacity: headerProgress.get(),
     transform: [{ translateY: (headerProgress.get() - 1) * headerHeight }],
-  }));
-  const viewerAnimatedStyle = useAnimatedStyle(() => ({
-    transform: [{ translateY: headerProgress.get() * viewerHeaderOffset }],
   }));
   const scrubberLabelAnimatedStyle = useAnimatedStyle(() => ({
     opacity: scrubberProgress.get(),
@@ -380,20 +377,17 @@ export default function PdfScreen() {
             testID="pdf-viewport"
             style={[
               {
-                width: Math.max(width - PDF_VIEWER_INSET * 2, 1),
-                height: Math.max(height - PDF_VIEWER_INSET * 2, 1),
-                marginBottom: PDF_VIEWER_INSET,
-                marginHorizontal: PDF_VIEWER_INSET,
-                marginTop: PDF_VIEWER_INSET,
+                width: Math.max(width, 1),
+                height: Math.max(height + viewerTopPadding, 1),
+                paddingTop: viewerTopPadding,
               },
-              viewerAnimatedStyle,
             ]}>
             <Pdf
               enablePaging={false}
               fitPolicy={0}
               horizontal={false}
               maxScale={5}
-              minScale={1}
+              minScale={initialPdfScale}
               onError={(pdfError) => {
                 setLoading(false);
                 setViewerError(pdfError instanceof Error ? pdfError.message : String(pdfError));
@@ -404,10 +398,11 @@ export default function PdfScreen() {
               }}
               onPageChanged={updateHeaderForPage}
               ref={pdfRef}
+              scale={initialPdfScale}
               source={{ uri }}
               spacing={8}
               style={{
-                flex: 1,
+                height: Math.max(height, 1),
                 width: '100%',
                 backgroundColor: colors.ink,
               }}
@@ -458,7 +453,7 @@ export default function PdfScreen() {
                   <Animated.View
                     pointerEvents="none"
                     testID="pdf-page-scrubber-label"
-                    className="absolute right-3 rounded-lg bg-white/45 px-2 py-1"
+                    className="absolute right-3.5 rounded-lg bg-white/45 px-2 py-1"
                     style={[
                       { transformOrigin: 'right center' },
                       scrubberLabelAnimatedStyle,

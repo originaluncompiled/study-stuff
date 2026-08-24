@@ -173,7 +173,11 @@ function RestTimerDialog() {
               </AppText>
               <AppText
                 accessibilityLabel={`Rest time remaining, ${formatTimer(secondsRemaining)}`}
-                className={isLandscape ? 'mt-2 text-[36px] leading-10' : 'mt-4 text-[52px] leading-[58px]'}
+                className={
+                  isLandscape
+                    ? 'mt-2 text-center text-[36px] leading-10'
+                    : 'mt-4 text-center text-[52px] leading-[58px]'
+                }
                 variant="display">
                 {formatTimer(secondsRemaining)}
               </AppText>

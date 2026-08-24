@@ -81,13 +81,13 @@ describe('PdfScreen', () => {
     expect(timerPill.props.className).toContain('bg-purple');
     expect(timerPill.props.className).toContain('h-11');
     expect(view.getByTestId('pdf-timer-running-icon')).toBeTruthy();
-    expect(view.getByTestId('pdf-header')).toHaveStyle({ height: 85 });
+    expect(view.getByTestId('pdf-header')).toHaveStyle({ height: 91, paddingTop: 47 });
     expect(view.getByTestId('pdf-timer-pill').props.className).toContain('absolute');
-    expect(view.getByTestId('pdf-timer-pill')).toHaveStyle({ top: 97 });
+    expect(view.getByTestId('pdf-timer-pill')).toHaveStyle({ top: 103 });
     expect(view.getByTestId('pdf-viewport').props.style[0]).toMatchObject({
-      height: Dimensions.get('window').height - 16,
-      marginTop: 8,
+      width: Dimensions.get('window').width,
     });
+    expect(pdf.props.style).toMatchObject({ height: Dimensions.get('window').height });
 
     await act(async () => {
       pdf.props.onPageChanged(2);
@@ -113,7 +113,7 @@ describe('PdfScreen', () => {
     await act(() => new Promise((resolve) => setTimeout(resolve, 250)));
     expect(hiddenTimerPill).toHaveAnimatedStyle({
       opacity: 0,
-      transform: [{ translateY: -85 }],
+      transform: [{ translateY: -91 }],
     });
 
     await fireEvent(view.getByTestId('pdf-viewer-container'), 'touchEnd');
@@ -172,7 +172,7 @@ describe('PdfScreen', () => {
     expect(view.queryByTestId('pdf-timer-running-icon')).toBeNull();
   });
 
-  test('keeps the rendered pages away from the screen edges', async () => {
+  test('keeps the initial page inset inside the full-screen zoom surface', async () => {
     const { height, width } = Dimensions.get('window');
     const view = await render(
       <SafeAreaProvider
@@ -184,17 +184,19 @@ describe('PdfScreen', () => {
       </SafeAreaProvider>,
     );
 
-    await view.findByTestId('pdf-viewer');
+    const pdf = await view.findByTestId('pdf-viewer');
     expect(view.getByTestId('pdf-viewport').props.style[0]).toMatchObject({
-      height: height - 16,
-      marginBottom: 8,
-      marginHorizontal: 8,
-      marginTop: 8,
-      width: width - 16,
+      height: height + 91,
+      paddingTop: 91,
+      width,
     });
+    expect(view.getByTestId('pdf-viewport').props.style[0]).not.toHaveProperty('marginHorizontal');
+    expect(pdf.props.style).toMatchObject({ height });
+    expect(pdf.props.scale).toBeCloseTo((width - 16) / width);
+    expect(pdf.props.minScale).toBeCloseTo((width - 16) / width);
   });
 
-  test('hides the overlay header without resizing the PDF viewport', async () => {
+  test('hides the overlay header without resizing the PDF page', async () => {
     const view = await render(
       <SafeAreaProvider
         initialMetrics={{
@@ -216,6 +218,14 @@ describe('PdfScreen', () => {
     expect(view.getByTestId('pdf-status-bar').props.hidden).toBe(false);
     expect(view.getByTestId('pdf-header').props.className).toContain('absolute');
     const initialViewportLayout = view.getByTestId('pdf-viewport').props.style[0];
+    const initialPdfLayout = pdf.props.style;
+    expect(initialViewportLayout).toMatchObject({
+      height: Dimensions.get('window').height + 91,
+      paddingTop: 91,
+    });
+    expect(StyleSheet.flatten(view.getByTestId('pdf-viewport').props.style)).not.toHaveProperty(
+      'transform',
+    );
 
     await act(async () => {
       pdf.props.onPageChanged(2);
@@ -231,13 +241,21 @@ describe('PdfScreen', () => {
 
     expect(view.getByTestId('stack-screen-options').props.options.headerShown).toBe(false);
     expect(view.getByTestId('pdf-status-bar').props.hidden).toBe(true);
-    expect(view.getByTestId('pdf-viewport').props.style[0]).toEqual(initialViewportLayout);
+    expect(pdf.props.style).toEqual(initialPdfLayout);
     const hiddenHeader = view.getByTestId('pdf-header', { includeHiddenElements: true });
     expect(hiddenHeader.props.pointerEvents).toBe('none');
     await act(() => new Promise((resolve) => setTimeout(resolve, 250)));
     expect(hiddenHeader).toHaveAnimatedStyle({
       opacity: 0,
-      transform: [{ translateY: -85 }],
+      transform: [{ translateY: -91 }],
+    });
+    expect(pdf.props.style).toMatchObject({ height: Dimensions.get('window').height });
+    expect(StyleSheet.flatten(view.getByTestId('pdf-viewport').props.style)).not.toHaveProperty(
+      'transform',
+    );
+    expect(view.getByTestId('pdf-viewport').props.style[0]).toMatchObject({
+      height: Dimensions.get('window').height,
+      paddingTop: 0,
     });
 
     await fireEvent(view.getByTestId('pdf-viewer-container'), 'touchEnd');
@@ -276,7 +294,7 @@ describe('PdfScreen', () => {
     expect(view.getByTestId('pdf-page-scrubber').props.pointerEvents).toBe('box-none');
     expect(view.getByTestId('pdf-page-scrubber-progress').props.className).toContain('h-[29px]');
     expect(view.getByTestId('pdf-page-scrubber-label').props.className).toContain('bg-white/45');
-    expect(view.getByTestId('pdf-page-scrubber-label').props.className).toContain('right-3');
+    expect(view.getByTestId('pdf-page-scrubber-label').props.className).toContain('right-3.5');
     expect(view.getByTestId('pdf-page-scrubber-progress').props.className).toContain('mr-1');
     expect(view.getByTestId('pdf-page-scrubber-handle').props.className).toContain(
       'h-12 w-[76px]',

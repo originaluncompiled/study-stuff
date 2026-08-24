@@ -213,7 +213,7 @@ export default function FolderScreen() {
             contentContainerStyle={{
               flexGrow: 1,
               padding: 20,
-              paddingBottom: getMainTabBarHeight(insets.bottom) + 8,
+              paddingBottom: getMainTabBarHeight(insets.bottom) + 20,
             }}
             showsVerticalScrollIndicator={false}
             ListEmptyComponent={

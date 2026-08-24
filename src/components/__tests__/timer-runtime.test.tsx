@@ -58,7 +58,9 @@ describe('TimerRuntime', () => {
     });
 
     expect(view.getByRole('header', { name: 'Time to rest' })).toBeTruthy();
-    expect(view.getByLabelText('Rest time remaining, 5:00')).toBeTruthy();
+    expect(view.getByLabelText('Rest time remaining, 5:00').props.className).toContain(
+      'text-center',
+    );
     expect(view.getByTestId('rest-timer-panel').props.className).toContain('max-w-lg');
     expect(selectionAsyncMock).toHaveBeenCalledTimes(1);
 
