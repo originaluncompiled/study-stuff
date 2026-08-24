@@ -1,4 +1,4 @@
-import { FileText, Folder, MoreVertical } from 'lucide-react-native';
+import { FileText, Folder, MoreVertical, Star } from 'lucide-react-native';
 import { Pressable, View } from 'react-native';
 
 import { AppText } from '@/components/app-text';
@@ -7,10 +7,12 @@ import type { LibraryEntry } from '@/types/library';
 
 export function EntryRow({
   entry,
+  favourite,
   onMenu,
   onPress,
 }: {
   entry: LibraryEntry;
+  favourite: boolean;
   onMenu: () => void;
   onPress: () => void;
 }) {
@@ -20,10 +22,15 @@ export function EntryRow({
   return (
     <View className="mb-3 flex-row items-center rounded-2xl border border-line bg-paper-raised">
       <Pressable
-        accessibilityLabel={`Open ${entry.name}${isDirectory && entry.childCount !== null ? `, ${detail}` : ''}`}
+        accessibilityLabel={`Open ${entry.name}${favourite ? ', Favourited' : ''}${isDirectory && entry.childCount !== null ? `, ${detail}` : ''}`}
         accessibilityRole="button"
         className="min-h-[76px] flex-1 flex-row items-center px-4 py-3 active:bg-[#EEE4CF]"
         onPress={onPress}>
+        {favourite ? (
+          <View accessible={false} className="mr-2 items-center justify-center">
+            <Star color={colors.purple} fill={colors.purple} size={20} />
+          </View>
+        ) : null}
         <View className={`h-12 w-12 items-center justify-center rounded-xl ${isDirectory ? 'bg-purple' : 'bg-ink'}`}>
           <Icon color={isDirectory ? colors.paperRaised : colors.paper} size={25} />
         </View>

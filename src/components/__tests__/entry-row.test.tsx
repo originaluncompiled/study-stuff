@@ -3,8 +3,15 @@ import { render } from '@testing-library/react-native';
 import { EntryRow } from '@/components/entry-row';
 import type { LibraryEntry } from '@/types/library';
 
-function renderEntry(entry: LibraryEntry) {
-  return render(<EntryRow entry={entry} onMenu={jest.fn()} onPress={jest.fn()} />);
+function renderEntry(entry: LibraryEntry, favourite = false) {
+  return render(
+    <EntryRow
+      entry={entry}
+      favourite={favourite}
+      onMenu={jest.fn()}
+      onPress={jest.fn()}
+    />,
+  );
 }
 
 describe('EntryRow', () => {
@@ -48,5 +55,19 @@ describe('EntryRow', () => {
     });
 
     expect(view.getByText('2 KB')).toBeTruthy();
+  });
+
+  test('exposes whether an entry is favourited', async () => {
+    const entry: LibraryEntry = {
+      childCount: null,
+      kind: 'pdf',
+      name: 'Notes.pdf',
+      relativePath: 'Notes.pdf',
+      size: 2048,
+    };
+
+    const view = await renderEntry(entry, true);
+
+    expect(view.getByRole('button', { name: 'Open Notes.pdf, Favourited' })).toBeTruthy();
   });
 });

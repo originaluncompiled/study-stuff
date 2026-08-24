@@ -3,6 +3,7 @@ import { Directory, File, FileMode, Paths } from 'expo-file-system';
 import { Platform } from 'react-native';
 
 import { isStudyFolderRecord } from '@/lib/folder-record';
+import { compareLibraryEntries } from '@/lib/library-entry-order';
 import {
   ensureUniqueName,
   getAvailableFileName,
@@ -160,12 +161,7 @@ export function listDirectory(folderId: string, relativePath?: string): LibraryE
         },
       ];
     })
-    .sort((left, right) => {
-      if (left.kind !== right.kind) {
-        return left.kind === 'directory' ? -1 : 1;
-      }
-      return left.name.localeCompare(right.name, undefined, { numeric: true, sensitivity: 'base' });
-    });
+    .sort(compareLibraryEntries);
 }
 
 export function createSubfolder(folderId: string, relativePath: string | undefined, value: string): void {

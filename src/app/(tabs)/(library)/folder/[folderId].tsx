@@ -1,6 +1,6 @@
 import * as Haptics from 'expo-haptics';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { FilePlus2, FolderPlus, Pencil, Plus, Trash2 } from 'lucide-react-native';
+import { FilePlus2, FolderPlus, Pencil, Plus, Star, Trash2 } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, FlatList, Pressable, ScrollView, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -11,8 +11,15 @@ import { EntryRow } from '@/components/entry-row';
 import { getMainTabBarHeight } from '@/components/main-tab-bar';
 import { NameDialog } from '@/components/name-dialog';
 import { colors } from '@/constants/theme';
+import { orderLibraryEntries } from '@/lib/library-entry-order';
 import { normalizePdfName, validateItemName } from '@/lib/names';
-import { normalizeRelativePath } from '@/lib/paths';
+import { joinRelativePath, normalizeRelativePath, parentRelativePath } from '@/lib/paths';
+import {
+  readFavouritePaths,
+  remapFavouritePaths,
+  removeFavouritePaths,
+  writeFavouritePaths,
+} from '@/services/library-favourites';
 import {
   createSubfolder,
   deleteEntry,
@@ -32,6 +39,8 @@ export default function FolderScreen() {
   const folder = useLibraryStore((state) => state.folders.find((item) => item.id === folderId));
   const touchFolder = useLibraryStore((state) => state.touchFolder);
   const [entries, setEntries] = useState<LibraryEntry[]>([]);
+  const [favouritePaths, setFavouritePaths] = useState<Set<string>>(new Set());
+  const [loadingFavourites, setLoadingFavourites] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [loadingEntries, setLoadingEntries] = useState(true);
   const [addingPdfs, setAddingPdfs] = useState(false);
@@ -69,6 +78,29 @@ export default function FolderScreen() {
     }, 0);
     return () => clearTimeout(timeout);
   }, [currentPath, folder, folderId, pathError, revision]);
+
+  useEffect(() => {
+    let cancelled = false;
+    readFavouritePaths(folderId)
+      .then((paths) => {
+        if (!cancelled) {
+          setFavouritePaths(paths);
+        }
+      })
+      .catch((error) => {
+        if (!cancelled) {
+          Alert.alert('Could not load favourites', getErrorMessage(error));
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setLoadingFavourites(false);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [folderId]);
 
   async function addPdfs() {
     if (addingPdfs) {
@@ -110,12 +142,44 @@ export default function FolderScreen() {
     });
   }
 
+  async function toggleFavourite(entry: LibraryEntry) {
+    const previous = favouritePaths;
+    const next = new Set(previous);
+    if (next.has(entry.relativePath)) {
+      next.delete(entry.relativePath);
+    } else {
+      next.add(entry.relativePath);
+    }
+
+    setActionTarget(null);
+    setFavouritePaths(next);
+    try {
+      await writeFavouritePaths(folderId, next);
+      void Haptics.selectionAsync();
+    } catch (error) {
+      setFavouritePaths(previous);
+      Alert.alert('Could not update favourite', getErrorMessage(error));
+    }
+  }
+
   async function submitRename(value: string) {
     if (!renameTarget) {
       return;
     }
     const name = renameTarget.kind === 'pdf' ? normalizePdfName(value) : validateItemName(value);
     renameEntry(folderId, renameTarget.relativePath, renameTarget.kind, name);
+    const nextPath = joinRelativePath(parentRelativePath(renameTarget.relativePath), name);
+    const nextFavourites = remapFavouritePaths(
+      favouritePaths,
+      renameTarget.relativePath,
+      nextPath,
+    );
+    setFavouritePaths(nextFavourites);
+    try {
+      await writeFavouritePaths(folderId, nextFavourites);
+    } catch (error) {
+      Alert.alert('Could not update favourites', getErrorMessage(error));
+    }
     setRevision((current) => current + 1);
     void touchFolder(folderId).catch(() => undefined);
     void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -136,6 +200,11 @@ export default function FolderScreen() {
           onPress: () => {
             try {
               deleteEntry(folderId, entry.relativePath, entry.kind);
+              const nextFavourites = removeFavouritePaths(favouritePaths, entry.relativePath);
+              setFavouritePaths(nextFavourites);
+              void writeFavouritePaths(folderId, nextFavourites).catch((error) => {
+                Alert.alert('Could not update favourites', getErrorMessage(error));
+              });
               setRevision((current) => current + 1);
               void touchFolder(folderId).catch(() => undefined);
             } catch (error) {
@@ -202,13 +271,13 @@ export default function FolderScreen() {
               {error}
             </AppText>
           </View>
-        ) : loadingEntries ? (
+        ) : loadingEntries || loadingFavourites ? (
           <View className="flex-1 items-center justify-center">
             <ActivityIndicator color={colors.purple} size="large" />
           </View>
         ) : (
           <FlatList
-            data={entries}
+            data={orderLibraryEntries(entries, favouritePaths)}
             keyExtractor={(entry) => entry.relativePath}
             contentContainerStyle={{
               flexGrow: 1,
@@ -232,6 +301,7 @@ export default function FolderScreen() {
             renderItem={({ item }) => (
               <EntryRow
                 entry={item}
+                favourite={favouritePaths.has(item.relativePath)}
                 onMenu={() => setActionTarget(item)}
                 onPress={() => openEntry(item)}
               />
@@ -266,6 +336,15 @@ export default function FolderScreen() {
         title={actionTarget?.name ?? 'Item options'}
         visible={Boolean(actionTarget)}
         onDismiss={() => setActionTarget(null)}>
+        <ActionRow
+          icon={Star}
+          label={
+            actionTarget && favouritePaths.has(actionTarget.relativePath)
+              ? 'Unfavourite'
+              : 'Favourite'
+          }
+          onPress={() => actionTarget && void toggleFavourite(actionTarget)}
+        />
         <ActionRow
           icon={Pencil}
           label="Rename"
