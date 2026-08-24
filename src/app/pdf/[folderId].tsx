@@ -88,7 +88,6 @@ export default function PdfScreen() {
   const timerManagerVisible = timerSession !== null && timerManagerSession === timerSession;
   const headerTopInset = insets.top;
   const headerHeight = headerTopInset + PDF_HEADER_CONTENT_HEIGHT;
-  const viewerTopPadding = headerVisible ? headerHeight : 0;
   const initialPdfScale = Math.max((width - PDF_PAGE_INSET * 2) / width, 0.1);
   const scrubberTop = headerHeight + 12;
   const scrubberBottom = Math.max(insets.bottom, 12) + 12;
@@ -377,9 +376,8 @@ export default function PdfScreen() {
             testID="pdf-viewport"
             style={[
               {
+                flex: 1,
                 width: Math.max(width, 1),
-                height: Math.max(height + viewerTopPadding, 1),
-                paddingTop: viewerTopPadding,
               },
             ]}>
             <Pdf
@@ -402,7 +400,7 @@ export default function PdfScreen() {
               source={{ uri }}
               spacing={8}
               style={{
-                height: Math.max(height, 1),
+                flex: 1,
                 width: '100%',
                 backgroundColor: colors.ink,
               }}

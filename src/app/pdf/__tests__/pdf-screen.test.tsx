@@ -87,7 +87,7 @@ describe('PdfScreen', () => {
     expect(view.getByTestId('pdf-viewport').props.style[0]).toMatchObject({
       width: Dimensions.get('window').width,
     });
-    expect(pdf.props.style).toMatchObject({ height: Dimensions.get('window').height });
+    expect(pdf.props.style).toMatchObject({ flex: 1 });
 
     await act(async () => {
       pdf.props.onPageChanged(2);
@@ -172,8 +172,8 @@ describe('PdfScreen', () => {
     expect(view.queryByTestId('pdf-timer-running-icon')).toBeNull();
   });
 
-  test('keeps the initial page inset inside the full-screen zoom surface', async () => {
-    const { height, width } = Dimensions.get('window');
+  test('keeps viewport padding out of the full-screen zoom surface', async () => {
+    const { width } = Dimensions.get('window');
     const view = await render(
       <SafeAreaProvider
         initialMetrics={{
@@ -186,12 +186,15 @@ describe('PdfScreen', () => {
 
     const pdf = await view.findByTestId('pdf-viewer');
     expect(view.getByTestId('pdf-viewport').props.style[0]).toMatchObject({
-      height: height + 91,
-      paddingTop: 91,
+      flex: 1,
       width,
     });
+    expect(view.getByTestId('pdf-viewport').props.style[0]).not.toHaveProperty('height');
+    expect(view.getByTestId('pdf-viewport').props.style[0]).not.toHaveProperty('paddingTop');
     expect(view.getByTestId('pdf-viewport').props.style[0]).not.toHaveProperty('marginHorizontal');
-    expect(pdf.props.style).toMatchObject({ height });
+    expect(pdf.props.style).toMatchObject({ flex: 1 });
+    expect(pdf.props.style).not.toHaveProperty('paddingBottom');
+    expect(pdf.props.style).not.toHaveProperty('paddingTop');
     expect(pdf.props.scale).toBeCloseTo((width - 16) / width);
     expect(pdf.props.minScale).toBeCloseTo((width - 16) / width);
   });
@@ -220,9 +223,10 @@ describe('PdfScreen', () => {
     const initialViewportLayout = view.getByTestId('pdf-viewport').props.style[0];
     const initialPdfLayout = pdf.props.style;
     expect(initialViewportLayout).toMatchObject({
-      height: Dimensions.get('window').height + 91,
-      paddingTop: 91,
+      flex: 1,
     });
+    expect(initialViewportLayout).not.toHaveProperty('height');
+    expect(initialViewportLayout).not.toHaveProperty('paddingTop');
     expect(StyleSheet.flatten(view.getByTestId('pdf-viewport').props.style)).not.toHaveProperty(
       'transform',
     );
@@ -249,14 +253,12 @@ describe('PdfScreen', () => {
       opacity: 0,
       transform: [{ translateY: -91 }],
     });
-    expect(pdf.props.style).toMatchObject({ height: Dimensions.get('window').height });
+
+    expect(pdf.props.style).toMatchObject({ flex: 1 });
     expect(StyleSheet.flatten(view.getByTestId('pdf-viewport').props.style)).not.toHaveProperty(
       'transform',
     );
-    expect(view.getByTestId('pdf-viewport').props.style[0]).toMatchObject({
-      height: Dimensions.get('window').height,
-      paddingTop: 0,
-    });
+    expect(view.getByTestId('pdf-viewport').props.style[0]).toEqual(initialViewportLayout);
 
     await fireEvent(view.getByTestId('pdf-viewer-container'), 'touchEnd');
     await fireEvent(view.getByTestId('pdf-viewer-container'), 'touchStart', {
