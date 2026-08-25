@@ -56,7 +56,16 @@ describe('EntryRow', () => {
 
     expect(view.getByText('2 KB')).toBeTruthy();
     expect(view.getByTestId('pdf-entry-icon')).toBeTruthy();
-    expect(view.queryByText('PDF')).toBeNull();
+    expect(view.getByTestId('pdf-entry-pill').props.className).toContain('bg-purple p-px');
+    expect(view.getByText('PDF').props).toEqual(
+      expect.objectContaining({
+        adjustsFontSizeToFit: true,
+        ellipsizeMode: 'clip',
+        maxFontSizeMultiplier: 1.25,
+        minimumFontScale: 0.75,
+        numberOfLines: 1,
+      }),
+    );
   });
 
   test.each([

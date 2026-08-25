@@ -134,7 +134,6 @@ export default function ImageScreen() {
           dismiss={{ enabled: false }}
           id={viewerId}
           initialIndex={resolution?.initialIndex ?? 0}
-          ListComponent={FlatList}
           maxZoomScale={5}
           onSingleTap={() => setHeaderVisible((visible) => !visible)}
           renderItem={(item, index, { isActive }) => (

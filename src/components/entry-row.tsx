@@ -46,7 +46,23 @@ export function EntryRow({
         ) : null}
         <View className={`h-12 w-12 items-center justify-center rounded-xl ${isDirectory ? 'bg-purple' : 'bg-ink'}`}>
           {entry.kind === 'pdf' ? (
-            <File color={colors.paper} size={27} testID="pdf-entry-icon" />
+            <View className="h-8 w-8 items-center justify-center">
+              <File color={colors.paper} size={30} testID="pdf-entry-icon" />
+              <View
+                className="absolute bottom-0 left-0 right-0 items-center justify-center overflow-hidden rounded-full bg-purple p-px"
+                testID="pdf-entry-pill">
+                <AppText
+                  adjustsFontSizeToFit
+                  ellipsizeMode="clip"
+                  maxFontSizeMultiplier={1.25}
+                  minimumFontScale={0.75}
+                  numberOfLines={1}
+                  variant="label"
+                  className="w-full text-center text-[10px] leading-3 text-paper-raised">
+                  PDF
+                </AppText>
+              </View>
+            </View>
           ) : (
             <Icon color={isDirectory ? colors.paperRaised : colors.paper} size={25} />
           )}

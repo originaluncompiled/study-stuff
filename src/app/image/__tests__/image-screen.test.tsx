@@ -4,7 +4,7 @@ import { act, fireEvent, render, waitFor } from '@testing-library/react-native';
 import ImageScreen from '@/app/image/[folderId]';
 
 const mockGoToIndex = jest.fn();
-let mockViewerProps: { initialIndex: number } | null = null;
+let mockViewerProps: { initialIndex: number; ListComponent?: unknown } | null = null;
 let mockZoomHandler: ((event: { scale: number }) => void) | null = null;
 
 jest.mock('expo-router', () => ({
@@ -127,6 +127,7 @@ describe('ImageScreen', () => {
     await view.findByTestId('image-viewer');
 
     expect(mockViewerProps?.initialIndex).toBe(1);
+    expect(mockViewerProps?.ListComponent).toBeUndefined();
     expect(view.getByText('Page 10.jpg')).toBeTruthy();
     expect(view.getByText('2 / 2')).toBeTruthy();
     expect(view.getAllByRole('button')).toHaveLength(2);
