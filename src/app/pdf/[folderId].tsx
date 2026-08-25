@@ -1,12 +1,8 @@
-import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { StatusBar } from 'expo-status-bar';
-import { AlertCircle, ChevronLeft, Clock3, Coffee, Pause } from 'lucide-react-native';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { AlertCircle } from 'lucide-react-native';
 import { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
-  Platform,
-  Pressable,
-  StatusBar as NativeStatusBar,
   View,
   useWindowDimensions,
   type GestureResponderEvent,
@@ -21,20 +17,18 @@ import Animated, {
   useSharedValue,
   withTiming,
 } from 'react-native-reanimated';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppText } from '@/components/app-text';
-import { TimerManagerSheet } from '@/components/timer-manager-sheet';
+import {
+  ImmersiveViewerChrome,
+  useImmersiveViewerChrome,
+} from '@/components/immersive-viewer-chrome';
 import { colors } from '@/constants/theme';
 import { normalizeRelativePath } from '@/lib/paths';
 import { getPdfScrubberOffset, getPdfScrubberPage } from '@/lib/pdf-viewer';
-import { formatTimer } from '@/lib/timer';
-import { getPdfFile } from '@/services/library-files';
-import { useTimerStore } from '@/store/timer-store';
+import { getLibraryFile, getLibraryFileKind } from '@/services/library-files';
 
-const PDF_HEADER_CONTENT_HEIGHT = 44;
 const PDF_HEADER_SCROLL_THRESHOLD = 12;
-const PDF_TIMER_PILL_GAP = 12;
 const PDF_SCRUBBER_HEIGHT = 48;
 const PDF_SCRUBBER_IDLE_DELAY = 1200;
 const PDF_SCRUBBER_WIDTH = 76;
@@ -43,22 +37,12 @@ const PDF_PAGE_INSET = 8;
 export default function PdfScreen() {
   const params = useLocalSearchParams<'/pdf/[folderId]'>();
   const router = useRouter();
-  const insets = useSafeAreaInsets();
   const rawPath = Array.isArray(params.path) ? params.path[0] : params.path;
   const { width, height } = useWindowDimensions();
-  const orientation: PdfOrientation = width > height ? 'landscape' : 'portrait';
-  const measuredHeaderTopInset =
-    Platform.OS === 'android'
-      ? Math.max(insets.top, NativeStatusBar.currentHeight ?? 0)
-      : insets.top;
-  const [headerTopInsets, setHeaderTopInsets] = useState<Partial<Record<PdfOrientation, number>>>(
-    () => ({ [orientation]: measuredHeaderTopInset }),
-  );
   const [loading, setLoading] = useState(true);
   const [viewerError, setViewerError] = useState<string | null>(null);
   const [resolution, setResolution] = useState<PdfResolution | null>(null);
   const [headerVisible, setHeaderVisible] = useState(true);
-  const [timerManagerSession, setTimerManagerSession] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [displayedPage, setDisplayedPage] = useState(1);
   const [numberOfPages, setNumberOfPages] = useState(0);
@@ -71,7 +55,6 @@ export default function PdfScreen() {
   const previousPage = useRef(1);
   const previousTouchY = useRef<number | null>(null);
   const directionalTouchTravel = useRef(0);
-  const headerProgress = useSharedValue(1);
   const scrubberProgress = useSharedValue(0);
   const scrubberOffset = useSharedValue(0);
   const scrubberDragStart = useSharedValue(0);
@@ -81,36 +64,14 @@ export default function PdfScreen() {
   const scrubberTravel = useSharedValue(0);
   const scrubbing = useSharedValue(false);
   const pendingPageRequest = useSharedValue(0);
-  const timerHydrated = useTimerStore((state) => state.hydrated);
-  const timerStatus = useTimerStore((state) => state.status);
-  const timerPhase = useTimerStore((state) => state.phase);
-  const timerDeadlineAtMs = useTimerStore((state) => state.deadlineAtMs);
-  const timerRemainingMs = useTimerStore((state) => state.remainingMs);
-  const timerSecondsRemaining = useTimerStore((state) => state.secondsRemaining);
-  const timerActive = timerHydrated && timerStatus !== 'idle';
-  const TimerPillIcon = timerStatus === 'paused' ? Pause : timerPhase === 'rest' ? Coffee : Clock3;
-  const timerSession =
-    timerStatus === 'running'
-      ? `${timerPhase}:running:${timerDeadlineAtMs}`
-      : timerStatus === 'paused'
-        ? `${timerPhase}:paused:${timerRemainingMs}`
-        : null;
-  const timerManagerVisible = timerSession !== null && timerManagerSession === timerSession;
-  const headerTopInset = Math.max(
-    headerTopInsets[orientation] ?? measuredHeaderTopInset,
-    measuredHeaderTopInset,
-  );
-  const headerHeight = headerTopInset + PDF_HEADER_CONTENT_HEIGHT;
+  const chrome = useImmersiveViewerChrome(headerVisible);
+  const { headerHeight, insets } = chrome;
   const scrubberTop = headerHeight + 12;
   const scrubberBottom = Math.max(insets.bottom, 12) + 12;
   const availableScrubberTravel = Math.max(
     height - scrubberTop - scrubberBottom - PDF_SCRUBBER_HEIGHT,
     0,
   );
-  const headerAnimatedStyle = useAnimatedStyle(() => ({
-    opacity: headerProgress.get(),
-    transform: [{ translateY: (headerProgress.get() - 1) * headerHeight }],
-  }));
   const scrubberLabelAnimatedStyle = useAnimatedStyle(() => ({
     opacity: scrubberProgress.get(),
     transform: [{ scaleX: scrubberProgress.get() }],
@@ -121,31 +82,10 @@ export default function PdfScreen() {
 
   useEffect(() => {
     const timeout = setTimeout(() => {
-      setHeaderTopInsets((currentInsets) => {
-        if ((currentInsets[orientation] ?? 0) >= measuredHeaderTopInset) {
-          return currentInsets;
-        }
-        return { ...currentInsets, [orientation]: measuredHeaderTopInset };
-      });
-    }, 0);
-    return () => clearTimeout(timeout);
-  }, [measuredHeaderTopInset, orientation]);
-
-  useEffect(() => {
-    const timeout = setTimeout(() => {
       setResolution(resolvePdf(params.folderId, rawPath));
     }, 0);
     return () => clearTimeout(timeout);
   }, [params.folderId, rawPath]);
-
-  useEffect(() => {
-    headerProgress.set(
-      withTiming(headerVisible ? 1 : 0, {
-        duration: 200,
-        easing: Easing.out(Easing.cubic),
-      }),
-    );
-  }, [headerProgress, headerVisible]);
 
   useEffect(() => {
     scrubberProgress.set(
@@ -357,17 +297,6 @@ export default function PdfScreen() {
 
   return (
     <View className="flex-1 bg-ink">
-      <StatusBar
-        animated
-        hidden={!headerVisible}
-        hideTransitionAnimation="fade"
-        style="light"
-      />
-      <Stack.Screen
-        options={{
-          headerShown: false,
-        }}
-      />
       {error ? (
         <View className="flex-1 items-center justify-center px-7">
           <View className="h-20 w-20 items-center justify-center rounded-[26px] bg-purple">
@@ -416,6 +345,7 @@ export default function PdfScreen() {
               horizontal={false}
               maxScale={5}
               onError={(pdfError) => {
+                setHeaderVisible(true);
                 setLoading(false);
                 setViewerError(pdfError instanceof Error ? pdfError.message : String(pdfError));
               }}
@@ -510,70 +440,12 @@ export default function PdfScreen() {
         </View>
       ) : null}
 
-      <Animated.View
-        accessibilityElementsHidden={!headerVisible}
-        importantForAccessibility={headerVisible ? 'auto' : 'no-hide-descendants'}
-        pointerEvents={headerVisible ? 'auto' : 'none'}
-        testID="pdf-header"
-        className="absolute left-0 right-0 top-0 z-10 bg-ink px-2"
-        style={[{ height: headerHeight, paddingTop: headerTopInset }, headerAnimatedStyle]}>
-        <View className="h-11 flex-row items-center">
-          <Pressable
-            accessibilityLabel="Go back"
-            accessibilityRole="button"
-            className="h-11 w-12 items-center justify-center rounded-full active:bg-white/10"
-            onPress={() => router.back()}>
-            <ChevronLeft color={colors.paper} size={30} strokeWidth={2.2} />
-          </Pressable>
-          <AppText
-            accessibilityRole="header"
-            ellipsizeMode="middle"
-            numberOfLines={1}
-            variant="label"
-            className="flex-1 text-center text-paper">
-            {fileName}
-          </AppText>
-          <View className="h-11 w-12" />
-        </View>
-      </Animated.View>
-      {timerActive ? (
-        <Animated.View
-          accessibilityElementsHidden={!headerVisible}
-          importantForAccessibility={headerVisible ? 'auto' : 'no-hide-descendants'}
-          pointerEvents={headerVisible ? 'box-none' : 'none'}
-          testID="pdf-timer-pill"
-          className="absolute left-0 right-0 z-20 items-center"
-          style={[{ top: headerHeight + PDF_TIMER_PILL_GAP }, headerAnimatedStyle]}>
-          <View className="relative h-11 min-w-28">
-            <View className="absolute inset-0 translate-x-1 translate-y-1 rounded-full bg-ink" />
-            <Pressable
-              accessibilityLabel={`${timerPhase === 'study' ? 'Study' : 'Rest'} timer${timerStatus === 'paused' ? ' paused' : ''}, ${formatTimer(timerSecondsRemaining)} remaining. Open timer controls.`}
-              accessibilityRole="button"
-              accessibilityState={{ expanded: timerManagerVisible }}
-              className="h-11 min-w-28 flex-row items-center justify-center gap-2 rounded-full border-2 border-ink bg-purple px-4 active:bg-purple-dark"
-              onPress={() => setTimerManagerSession(timerSession)}>
-              <TimerPillIcon
-                color={colors.white}
-                size={16}
-                strokeWidth={2.4}
-                testID={
-                  timerStatus === 'paused'
-                    ? 'pdf-timer-paused-icon'
-                    : timerPhase === 'rest'
-                      ? 'pdf-timer-rest-icon'
-                      : 'pdf-timer-running-icon'
-                }
-              />
-              <AppText className="text-white" variant="label">
-                {formatTimer(timerSecondsRemaining)}
-              </AppText>
-            </Pressable>
-          </View>
-        </Animated.View>
-      ) : null}
-      <TimerManagerSheet
-        onDismiss={() => setTimerManagerSession(null)}
-        visible={timerManagerVisible}
+      <ImmersiveViewerChrome
+        chrome={chrome}
+        headerVisible={headerVisible}
+        onBack={() => router.back()}
+        testIDPrefix="pdf"
+        title={fileName}
       />
     </View>
   );
@@ -585,15 +457,16 @@ type PdfResolution = {
   uri: string | null;
 };
 
-type PdfOrientation = 'landscape' | 'portrait';
-
 function resolvePdf(folderId: string, rawPath: string | undefined): PdfResolution {
   try {
     const relativePath = normalizeRelativePath(rawPath);
     const fileName = relativePath.split('/').at(-1) || 'PDF';
-    const file = getPdfFile(folderId, relativePath);
+    const file = getLibraryFile(folderId, relativePath);
     if (!file.exists) {
       throw new Error('This PDF is no longer stored on the device.');
+    }
+    if (getLibraryFileKind(file) !== 'pdf') {
+      throw new Error('This is not a supported PDF file.');
     }
     return { error: null, fileName, uri: file.uri };
   } catch (error) {

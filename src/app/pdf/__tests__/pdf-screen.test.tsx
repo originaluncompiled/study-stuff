@@ -42,7 +42,8 @@ jest.mock('react-native-pdf', () => {
 });
 
 jest.mock('@/services/library-files', () => ({
-  getPdfFile: () => ({ exists: true, uri: 'file:///Biology.pdf' }),
+  getLibraryFile: () => ({ exists: true, uri: 'file:///Biology.pdf' }),
+  getLibraryFileKind: () => 'pdf',
 }));
 
 describe('PdfScreen', () => {

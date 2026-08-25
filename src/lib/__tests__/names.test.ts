@@ -2,6 +2,7 @@ import {
   ensureUniqueName,
   getAvailableFileName,
   inferPickedFolderName,
+  normalizeFileName,
   normalizePdfName,
   validateItemName,
 } from '@/lib/names';
@@ -20,15 +21,24 @@ describe('library names', () => {
     expect(ensureUniqueName('BIOLOGY', ['Biology'], 'Biology')).toBe('BIOLOGY');
   });
 
-  test('numbers duplicate PDF filenames before the extension', () => {
-    expect(getAvailableFileName('Notes.pdf', ['Notes.pdf', 'Notes (2).pdf'])).toBe(
-      'Notes (3).pdf',
+  test('numbers duplicate filenames before the extension', () => {
+    expect(getAvailableFileName('Notes.txt', ['Notes.txt', 'Notes (2).txt'])).toBe(
+      'Notes (3).txt',
     );
   });
 
   test('adds a PDF extension when needed', () => {
     expect(normalizePdfName('Chapter 4')).toBe('Chapter 4.pdf');
     expect(normalizePdfName('Chapter 4.PDF')).toBe('Chapter 4.PDF');
+  });
+
+  test('normalizes file names while preserving an existing extension', () => {
+    expect(normalizeFileName('Notes', '.txt')).toBe('Notes.txt');
+    expect(normalizeFileName('Photo.JPEG', '.jpeg')).toBe('Photo.JPEG');
+  });
+
+  test('counts the extension toward the maximum name length', () => {
+    expect(() => normalizeFileName('a'.repeat(79), '.txt')).toThrow('including the extension');
   });
 
   test('extracts a useful Android tree name', () => {

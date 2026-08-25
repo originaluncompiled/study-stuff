@@ -45,7 +45,7 @@ describe('EntryRow', () => {
     expect(view.getByRole('button', { name: 'Open Biology' })).toBeTruthy();
   });
 
-  test('continues to show file size for PDFs', async () => {
+  test('shows file sizes for supported files', async () => {
     const view = await renderEntry({
       childCount: null,
       kind: 'pdf',
@@ -55,6 +55,22 @@ describe('EntryRow', () => {
     });
 
     expect(view.getByText('2 KB')).toBeTruthy();
+  });
+
+  test.each([
+    ['pdf', 'Notes.pdf', 'PDF document'],
+    ['image', 'Diagram.png', 'Image'],
+    ['text', 'Notes.txt', 'Text file'],
+  ] as const)('shows the %s fallback label when size is unavailable', async (kind, name, label) => {
+    const view = await renderEntry({
+      childCount: null,
+      kind,
+      name,
+      relativePath: name,
+      size: null,
+    });
+
+    expect(view.getByText(label)).toBeTruthy();
   });
 
   test('exposes whether an entry is favourited', async () => {

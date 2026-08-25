@@ -18,15 +18,17 @@ export type StudyFolder = {
   updatedAt: string;
 };
 
+export type LibraryFileKind = 'pdf' | 'image' | 'text';
+
 export type LibraryEntry = {
   childCount: number | null;
-  kind: 'directory' | 'pdf';
+  kind: 'directory' | LibraryFileKind;
   name: string;
   relativePath: string;
   size: number | null;
 };
 
 export type ImportProgress = {
-  copiedPdfs: number;
+  copiedFiles: number;
   currentName: string;
 };

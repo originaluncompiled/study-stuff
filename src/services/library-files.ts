@@ -1,19 +1,30 @@
 import { randomUUID } from 'expo-crypto';
 import { Directory, File, FileMode, Paths } from 'expo-file-system';
+import * as ImagePicker from 'expo-image-picker';
 import { Platform } from 'react-native';
 
 import { isStudyFolderRecord } from '@/lib/folder-record';
+import {
+  classifyLibraryFile,
+  type LibraryFileDescriptor,
+  supportedPickerMimeTypes,
+} from '@/lib/library-file';
 import { compareLibraryEntries } from '@/lib/library-entry-order';
 import {
   ensureUniqueName,
   getAvailableFileName,
   inferPickedFolderName,
-  normalizePdfName,
+  normalizeFileName,
   sanitizeStorageName,
   validateItemName,
 } from '@/lib/names';
 import { joinRelativePath, relativePathSegments, validateFolderId } from '@/lib/paths';
-import type { ImportProgress, LibraryEntry, StudyFolder } from '@/types/library';
+import type {
+  ImportProgress,
+  LibraryEntry,
+  LibraryFileKind,
+  StudyFolder,
+} from '@/types/library';
 
 const ROOT_DIRECTORY_NAME = 'StudyStuff';
 const FOLDERS_DIRECTORY_NAME = 'folders';
@@ -46,7 +57,7 @@ export function getDirectory(folderId: string, relativePath?: string): Directory
   return new Directory(getFolderDirectory(folderId), ...relativePathSegments(relativePath));
 }
 
-export function getPdfFile(folderId: string, relativePath: string): File {
+export function getLibraryFile(folderId: string, relativePath: string): File {
   return new File(getFolderDirectory(folderId), ...relativePathSegments(relativePath));
 }
 
@@ -148,13 +159,14 @@ export function listDirectory(folderId: string, relativePath?: string): LibraryE
           },
         ];
       }
-      if (!isPdf(entry)) {
+      const descriptor = getLibraryFileDescriptor(entry);
+      if (!descriptor) {
         return [];
       }
       return [
         {
           childCount: null,
-          kind: 'pdf',
+          kind: descriptor.kind,
           name: entry.name,
           relativePath: joinRelativePath(relativePath ?? '', entry.name),
           size: entry.size,
@@ -185,37 +197,88 @@ function countDirectItems(directory: Directory): number | null {
   try {
     return directory
       .list()
-      .filter((entry) => entry instanceof Directory || isPdf(entry)).length;
+      .filter((entry) => entry instanceof Directory || Boolean(getLibraryFileDescriptor(entry)))
+      .length;
   } catch {
     return null;
   }
 }
 
-export async function pickAndCopyPdfs(
+export async function pickAndCopyFiles(
   folderId: string,
   relativePath?: string,
 ): Promise<number> {
   lockFolder(folderId);
   try {
-    return await pickAndCopyPdfsUnlocked(folderId, relativePath);
+    const result = await File.pickFileAsync({
+      multipleFiles: true,
+      mimeTypes: supportedPickerMimeTypes,
+    });
+    if (result.canceled || !result.result) {
+      return 0;
+    }
+    return await copyFilesUnlocked(
+      folderId,
+      relativePath,
+      result.result.map((file) => ({ file })),
+    );
   } finally {
     unlockFolder(folderId);
   }
 }
 
-async function pickAndCopyPdfsUnlocked(
+export async function takeAndCopyPhoto(
   folderId: string,
   relativePath?: string,
 ): Promise<number> {
-  const result = await File.pickFileAsync({
-    multipleFiles: true,
-    mimeTypes: ['application/pdf'],
-  });
-  if (result.canceled || !result.result) {
-    return 0;
-  }
+  lockFolder(folderId);
+  try {
+    const permission = await ImagePicker.requestCameraPermissionsAsync();
+    if (!permission.granted) {
+      throw new Error(
+        permission.canAskAgain
+          ? 'Camera permission is needed to take a picture.'
+          : 'Camera access is disabled. Enable it in your device settings to take a picture.',
+      );
+    }
 
+    const result = await ImagePicker.launchCameraAsync({
+      cameraType: ImagePicker.CameraType.back,
+      mediaTypes: ['images'],
+      quality: 1,
+    });
+    if (result.canceled || !result.assets[0]) {
+      return 0;
+    }
+
+    const asset = result.assets[0];
+    return await copyFilesUnlocked(folderId, relativePath, [
+      {
+        file: new File(asset.uri),
+        mimeType: asset.mimeType,
+        preferredName: asset.fileName,
+      },
+    ]);
+  } finally {
+    unlockFolder(folderId);
+  }
+}
+
+type CopySource = {
+  file: File;
+  mimeType?: string | null;
+  preferredName?: string | null;
+};
+
+async function copyFilesUnlocked(
+  folderId: string,
+  relativePath: string | undefined,
+  sources: CopySource[],
+): Promise<number> {
   const destination = getDirectory(folderId, relativePath);
+  if (!destination.exists) {
+    throw new Error('This folder no longer exists.');
+  }
   const existingNames = new Set(destination.list().map((entry) => entry.name));
   const batch = new Directory(stagingDirectory(), randomUUID());
   batch.create();
@@ -223,13 +286,19 @@ async function pickAndCopyPdfsUnlocked(
   const committed: File[] = [];
 
   try {
-    for (const source of result.result) {
-      if (!isPdf(source)) {
+    for (const source of sources) {
+      const descriptor = getLibraryFileDescriptor(source.file, source.mimeType);
+      if (!descriptor) {
         continue;
       }
-      const safeName = pdfStorageName(source, `Document ${copied + 1}.pdf`);
+      const safeName = libraryFileStorageName(
+        source.file,
+        descriptor,
+        getFallbackFileName(descriptor, copied + 1),
+        source.preferredName,
+      );
       const name = getAvailableFileName(safeName, existingNames);
-      await source.copy(new File(batch, name));
+      await source.file.copy(new File(batch, name));
       existingNames.add(name);
     }
 
@@ -255,11 +324,11 @@ async function pickAndCopyPdfsUnlocked(
   }
 }
 
-export async function importPickedPdfDirectory(
+export async function importPickedDirectory(
   folderId: string,
   onProgress: (progress: ImportProgress) => void,
   createMetadata: (suggestedName: string) => StudyFolder,
-): Promise<{ folder: StudyFolder; pdfCount: number }> {
+): Promise<{ fileCount: number; folder: StudyFolder }> {
   if (Platform.OS !== 'android') {
     throw new Error('Whole-folder import is currently available on Android only.');
   }
@@ -269,19 +338,19 @@ export async function importPickedPdfDirectory(
   const staging = new Directory(stagingDirectory(), validateFolderId(folderId));
   staging.create();
 
-  const progress: ImportProgress = { copiedPdfs: 0, currentName: '' };
+  const progress: ImportProgress = { copiedFiles: 0, currentName: '' };
   try {
-    await copyPdfTree(source, staging, progress, onProgress, new Set(), 0);
-    if (progress.copiedPdfs === 0) {
-      throw new Error('No PDF files were found in that folder.');
+    await copyFileTree(source, staging, progress, onProgress, new Set(), 0);
+    if (progress.copiedFiles === 0) {
+      throw new Error('No supported files were found in that folder.');
     }
 
     const folder = createMetadata(inferPickedFolderName(source.name));
     writeMetadataToDirectory(staging, folder);
     await staging.move(getFolderDirectory(folderId));
     return {
+      fileCount: progress.copiedFiles,
       folder,
-      pdfCount: progress.copiedPdfs,
     };
   } catch (error) {
     if (staging.exists) {
@@ -291,7 +360,7 @@ export async function importPickedPdfDirectory(
   }
 }
 
-async function copyPdfTree(
+async function copyFileTree(
   source: Directory,
   destination: Directory,
   progress: ImportProgress,
@@ -319,7 +388,7 @@ async function copyPdfTree(
       const name = getAvailableFileName(preferredName, destinationNames);
       const childDestination = new Directory(destination, name);
       childDestination.create();
-      const childCount = await copyPdfTree(
+      const childCount = await copyFileTree(
         entry,
         childDestination,
         progress,
@@ -337,15 +406,20 @@ async function copyPdfTree(
       continue;
     }
 
-    if (!isPdf(entry)) {
+    const descriptor = getLibraryFileDescriptor(entry);
+    if (!descriptor) {
       continue;
     }
-    const preferredName = pdfStorageName(entry, `Document ${progress.copiedPdfs + 1}.pdf`);
+    const preferredName = libraryFileStorageName(
+      entry,
+      descriptor,
+      getFallbackFileName(descriptor, progress.copiedFiles + 1),
+    );
     const name = getAvailableFileName(preferredName, destinationNames);
     await entry.copy(new File(destination, name));
     destinationNames.add(name);
     copiedHere += 1;
-    progress.copiedPdfs += 1;
+    progress.copiedFiles += 1;
     progress.currentName = name;
     onProgress({ ...progress });
   }
@@ -353,43 +427,153 @@ async function copyPdfTree(
   return copiedHere;
 }
 
-function isPdf(file: File): boolean {
+export function getLibraryFileKind(file: File): LibraryFileKind | null {
+  return getLibraryFileDescriptor(file)?.kind ?? null;
+}
+
+function getLibraryFileDescriptor(
+  file: File,
+  mimeType?: string | null,
+): LibraryFileDescriptor | null {
   try {
-    if (
-      file.type.toLocaleLowerCase().split(';')[0] === 'application/pdf' ||
-      file.extension.toLocaleLowerCase() === '.pdf'
-    ) {
-      return true;
+    const descriptor = classifyLibraryFile(file.extension, mimeType ?? file.type);
+    if (descriptor) {
+      return descriptor;
     }
   } catch {
-    // Fall through to a minimal signature check for opaque provider URIs.
+    // Fall through to a small signature check for opaque provider URIs.
   }
 
   let handle: ReturnType<File['open']> | null = null;
   try {
     handle = file.open(FileMode.ReadOnly);
-    const header = handle.readBytes(5);
-    return (
-      header[0] === 0x25 &&
-      header[1] === 0x50 &&
-      header[2] === 0x44 &&
-      header[3] === 0x46 &&
-      header[4] === 0x2d
-    );
+    return classifyFileSignature(handle.readBytes(12));
   } catch {
-    return false;
+    return null;
   } finally {
     handle?.close();
   }
 }
 
-function pdfStorageName(file: File, fallback: string): string {
-  const safeName = sanitizeStorageName(file.name, fallback);
-  return safeName.toLocaleLowerCase().endsWith('.pdf') ? safeName : `${safeName}.pdf`;
+function classifyFileSignature(header: Uint8Array): LibraryFileDescriptor | null {
+  if (
+    header[0] === 0x25 &&
+    header[1] === 0x50 &&
+    header[2] === 0x44 &&
+    header[3] === 0x46 &&
+    header[4] === 0x2d
+  ) {
+    return { extension: '.pdf', kind: 'pdf' };
+  }
+  if (header[0] === 0xff && header[1] === 0xd8 && header[2] === 0xff) {
+    return { extension: '.jpg', kind: 'image' };
+  }
+  if (
+    header[0] === 0x89 &&
+    header[1] === 0x50 &&
+    header[2] === 0x4e &&
+    header[3] === 0x47 &&
+    header[4] === 0x0d &&
+    header[5] === 0x0a &&
+    header[6] === 0x1a &&
+    header[7] === 0x0a
+  ) {
+    return { extension: '.png', kind: 'image' };
+  }
+  const signature = String.fromCharCode(...header);
+  if (signature.startsWith('GIF87a') || signature.startsWith('GIF89a')) {
+    return { extension: '.gif', kind: 'image' };
+  }
+  if (signature.startsWith('RIFF') && signature.slice(8, 12) === 'WEBP') {
+    return { extension: '.webp', kind: 'image' };
+  }
+  if (header[0] === 0 && header[1] === 0 && header[2] === 1 && header[3] === 0) {
+    return { extension: '.ico', kind: 'image' };
+  }
+  if (signature.slice(4, 8) === 'ftyp') {
+    const brand = signature.slice(8, 12);
+    if (brand === 'avif' || brand === 'avis') {
+      return { extension: '.avif', kind: 'image' };
+    }
+    if (['heic', 'heix', 'hevc', 'hevx', 'mif1', 'msf1'].includes(brand)) {
+      return { extension: '.heic', kind: 'image' };
+    }
+  }
+  return null;
+}
+
+function libraryFileStorageName(
+  file: File,
+  descriptor: LibraryFileDescriptor,
+  fallback: string,
+  preferredName?: string | null,
+): string {
+  const safeName = sanitizeStorageName(preferredName || file.name, fallback);
+  const namedDescriptor = classifyLibraryFile(fileExtension(safeName));
+  return namedDescriptor?.kind === descriptor.kind ? safeName : `${safeName}${descriptor.extension}`;
+}
+
+function getFallbackFileName(descriptor: LibraryFileDescriptor, index: number): string {
+  const label = descriptor.kind === 'pdf' ? 'Document' : descriptor.kind === 'image' ? 'Image' : 'Text';
+  return `${label} ${index}${descriptor.extension}`;
+}
+
+function fileExtension(name: string): string {
+  const dotIndex = name.lastIndexOf('.');
+  return dotIndex > 0 ? name.slice(dotIndex) : '';
 }
 
 function yieldToUi(): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, 0));
+}
+
+export function createTextFile(
+  folderId: string,
+  relativePath: string | undefined,
+  value: string,
+): string {
+  return withFolderLock(folderId, () => {
+    const parent = getDirectory(folderId, relativePath);
+    if (!parent.exists) {
+      throw new Error('This folder no longer exists.');
+    }
+    const name = ensureUniqueName(
+      normalizeFileName(value, '.txt'),
+      parent.list().map((entry) => entry.name),
+    );
+    const file = new File(parent, name);
+    file.create();
+    file.write('');
+    return joinRelativePath(relativePath ?? '', name);
+  });
+}
+
+export async function readTextFile(folderId: string, relativePath: string): Promise<string> {
+  const file = getLibraryFile(folderId, relativePath);
+  if (!file.exists) {
+    throw new Error('This text file is no longer stored on the device.');
+  }
+  if (getLibraryFileKind(file) !== 'text') {
+    throw new Error('This is not a supported text file.');
+  }
+  return await file.text();
+}
+
+export async function writeTextFile(
+  folderId: string,
+  relativePath: string,
+  content: string,
+): Promise<void> {
+  withFolderLock(folderId, () => {
+    const file = getLibraryFile(folderId, relativePath);
+    if (!file.exists) {
+      throw new Error('This text file is no longer stored on the device.');
+    }
+    if (getLibraryFileKind(file) !== 'text') {
+      throw new Error('This is not a supported text file.');
+    }
+    file.write(content);
+  });
 }
 
 export function renameEntry(
@@ -397,9 +581,9 @@ export function renameEntry(
   relativePath: string,
   kind: LibraryEntry['kind'],
   newName: string,
-): void {
-  withFolderLock(folderId, () => {
-    renameEntryUnlocked(folderId, relativePath, kind, newName);
+): string {
+  return withFolderLock(folderId, () => {
+    return renameEntryUnlocked(folderId, relativePath, kind, newName);
   });
 }
 
@@ -408,20 +592,28 @@ function renameEntryUnlocked(
   relativePath: string,
   kind: LibraryEntry['kind'],
   newName: string,
-): void {
-  const safeNewName = kind === 'pdf' ? normalizePdfName(newName) : validateItemName(newName);
+): string {
   const segments = relativePathSegments(relativePath);
   const oldName = segments.pop();
   if (!oldName) {
     throw new Error('The library root cannot be renamed here.');
   }
+  const parent = new Directory(getFolderDirectory(folderId), ...segments);
+  const currentFile = kind === 'directory' ? null : new File(parent, oldName);
+  const descriptor = currentFile ? getLibraryFileDescriptor(currentFile) : null;
+  if (kind !== 'directory' && descriptor?.kind !== kind) {
+    throw new Error('This file type could not be verified.');
+  }
+  const safeNewName =
+    kind === 'directory'
+      ? validateItemName(newName)
+      : normalizeFileName(newName, descriptor?.extension ?? fileExtension(oldName));
   if (
     segments.length === 0 &&
     [METADATA_FILE_NAME, METADATA_TEMP_FILE_NAME].includes(safeNewName)
   ) {
     throw new Error('That name is reserved by StudyStuff.');
   }
-  const parent = new Directory(getFolderDirectory(folderId), ...segments);
   const names = parent.list().map((entry) => entry.name);
   const duplicate = names.some(
     (name) => name.toLocaleLowerCase() === safeNewName.toLocaleLowerCase() && name !== oldName,
@@ -435,6 +627,7 @@ function renameEntryUnlocked(
       ? new Directory(parent, oldName)
       : new File(parent, oldName);
   entry.rename(safeNewName);
+  return safeNewName;
 }
 
 export function deleteEntry(

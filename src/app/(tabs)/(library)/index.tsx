@@ -23,7 +23,7 @@ import type { FolderColor, ImportProgress, StudyFolder } from '@/types/library';
 
 type GridItem = { type: 'add' } | { type: 'folder'; folder: StudyFolder };
 
-const initialProgress: ImportProgress = { copiedPdfs: 0, currentName: '' };
+const initialProgress: ImportProgress = { copiedFiles: 0, currentName: '' };
 const addItem: GridItem = { type: 'add' };
 
 function getGridItemKey(item: GridItem): string {
@@ -170,7 +170,7 @@ export default function LibraryScreen() {
     setActionTarget(null);
     Alert.alert(
       `Delete “${folder.name}”?`,
-      'This permanently removes the folder and every PDF stored inside it.',
+      'This permanently removes the folder and every file stored inside it.',
       [
         { style: 'cancel', text: 'Cancel' },
         {
@@ -238,7 +238,7 @@ export default function LibraryScreen() {
         visible={addSheetVisible}
         onDismiss={() => setAddSheetVisible(false)}>
         <ActionRow
-          description="Make a named folder, then add PDFs to it."
+          description="Make a named folder, then add files to it."
           icon={FilePlus2}
           label="New empty folder"
           onPress={() => {
@@ -249,7 +249,7 @@ export default function LibraryScreen() {
         <ActionRow
           description={
             Platform.OS === 'android'
-              ? 'Copy PDFs and nested folders from device storage.'
+              ? 'Copy files and nested folders from device storage.'
               : 'Whole-folder import is available on Android first.'
           }
           icon={FolderInput}

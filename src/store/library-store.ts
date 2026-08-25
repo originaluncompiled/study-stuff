@@ -10,7 +10,7 @@ import {
   deleteFolderDirectory,
   ensureLibraryStorage,
   getFolderDirectory,
-  importPickedPdfDirectory,
+  importPickedDirectory,
   readFolderMetadataFromDisk,
   reconcileTrash,
   restoreStagedFolder,
@@ -125,7 +125,7 @@ export const useLibraryStore = create<LibraryStore>((set, get) => ({
   importFolder: (onProgress) => serializeMutation(async () => {
     const folders = get().folders;
     const id = randomUUID();
-    const imported = await importPickedPdfDirectory(id, onProgress, (suggestedName) => {
+    const imported = await importPickedDirectory(id, onProgress, (suggestedName) => {
       const name = uniqueImportedName(suggestedName, folders.map((folder) => folder.name));
       const now = new Date().toISOString();
       return { color: defaultFolderColor, id, name, createdAt: now, updatedAt: now };

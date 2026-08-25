@@ -4,6 +4,7 @@ import {
   AccessibilityInfo,
   Modal,
   Pressable,
+  ScrollView,
   View,
   findNodeHandle,
   useWindowDimensions,
@@ -210,7 +211,18 @@ export function ActionSheet({ children, description, onDismiss, title, visible }
           ) : (
             <View className="h-4" />
           )}
-          <View className="gap-3">{children}</View>
+          <ScrollView
+            contentContainerClassName="gap-3 pb-1"
+            nestedScrollEnabled
+            showsVerticalScrollIndicator={false}
+            style={{
+              maxHeight: Math.max(
+                120,
+                windowHeight - insets.top - Math.max(insets.bottom, 24) - 116,
+              ),
+            }}>
+            {children}
+          </ScrollView>
         </Animated.View>
       </GestureHandlerRootView>
     </Modal>

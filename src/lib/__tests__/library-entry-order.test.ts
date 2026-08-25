@@ -40,4 +40,22 @@ describe('orderLibraryEntries', () => {
 
     expect(entries.map((item) => item.name)).toEqual(['Zoology', 'Biology']);
   });
+
+  test('sorts mixed file kinds together after directories', () => {
+    const entries = [
+      entry('Notes.txt', 'text'),
+      entry('Page 10.jpg', 'image'),
+      entry('Chapter.pdf', 'pdf'),
+      entry('Folder', 'directory'),
+      entry('Page 2.jpg', 'image'),
+    ];
+
+    expect(orderLibraryEntries(entries, new Set()).map((item) => item.name)).toEqual([
+      'Folder',
+      'Chapter.pdf',
+      'Notes.txt',
+      'Page 2.jpg',
+      'Page 10.jpg',
+    ]);
+  });
 });

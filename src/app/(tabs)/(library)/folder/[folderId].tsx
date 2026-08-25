@@ -1,6 +1,16 @@
 import * as Haptics from 'expo-haptics';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { ChevronRight, FilePlus2, FolderPlus, Pencil, Plus, Star, Trash2 } from 'lucide-react-native';
+import {
+  Camera,
+  ChevronRight,
+  FilePlus2,
+  FileText,
+  FolderPlus,
+  Pencil,
+  Plus,
+  Star,
+  Trash2,
+} from 'lucide-react-native';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, FlatList, Pressable, ScrollView, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -12,7 +22,6 @@ import { getMainTabBarHeight } from '@/components/main-tab-bar';
 import { NameDialog } from '@/components/name-dialog';
 import { colors } from '@/constants/theme';
 import { orderLibraryEntries } from '@/lib/library-entry-order';
-import { normalizePdfName, validateItemName } from '@/lib/names';
 import { joinRelativePath, normalizeRelativePath, parentRelativePath } from '@/lib/paths';
 import {
   readFavouritePaths,
@@ -22,10 +31,12 @@ import {
 } from '@/services/library-favourites';
 import {
   createSubfolder,
+  createTextFile,
   deleteEntry,
   listDirectory,
-  pickAndCopyPdfs,
+  pickAndCopyFiles,
   renameEntry,
+  takeAndCopyPhoto,
 } from '@/services/library-files';
 import { useLibraryStore } from '@/store/library-store';
 import type { LibraryEntry } from '@/types/library';
@@ -43,10 +54,11 @@ export default function FolderScreen() {
   const [loadingFavourites, setLoadingFavourites] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [loadingEntries, setLoadingEntries] = useState(true);
-  const [addingPdfs, setAddingPdfs] = useState(false);
+  const [addingFiles, setAddingFiles] = useState(false);
   const [revision, setRevision] = useState(0);
   const [addSheetVisible, setAddSheetVisible] = useState(false);
   const [newFolderDialogVisible, setNewFolderDialogVisible] = useState(false);
+  const [newTextDialogVisible, setNewTextDialogVisible] = useState(false);
   const [actionTarget, setActionTarget] = useState<LibraryEntry | null>(null);
   const [renameTarget, setRenameTarget] = useState<LibraryEntry | null>(null);
 
@@ -105,22 +117,25 @@ export default function FolderScreen() {
     };
   }, [folderId]);
 
-  async function addPdfs() {
-    if (addingPdfs) {
+  async function addFiles(source: 'picker' | 'camera') {
+    if (addingFiles) {
       return;
     }
-    setAddingPdfs(true);
+    setAddingFiles(true);
     try {
-      const copied = await pickAndCopyPdfs(folderId, currentPath);
+      const copied =
+        source === 'picker'
+          ? await pickAndCopyFiles(folderId, currentPath)
+          : await takeAndCopyPhoto(folderId, currentPath);
       if (copied > 0) {
         void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         void touchFolder(folderId).catch(() => undefined);
       }
     } catch (error) {
-      Alert.alert('Could not add PDFs', getErrorMessage(error));
+      Alert.alert(source === 'picker' ? 'Could not import files' : 'Could not take picture', getErrorMessage(error));
     } finally {
       setRevision((value) => value + 1);
-      setAddingPdfs(false);
+      setAddingFiles(false);
     }
   }
 
@@ -131,6 +146,17 @@ export default function FolderScreen() {
     void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
   }
 
+  function createNamedTextFile(name: string) {
+    const relativePath = createTextFile(folderId, currentPath, name);
+    setRevision((current) => current + 1);
+    void touchFolder(folderId).catch(() => undefined);
+    void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    router.push({
+      pathname: '/text/[folderId]',
+      params: { edit: '1', folderId, path: relativePath },
+    });
+  }
+
   function openEntry(entry: LibraryEntry) {
     if (entry.kind === 'directory') {
       router.push({
@@ -139,10 +165,13 @@ export default function FolderScreen() {
       });
       return;
     }
-    router.push({
-      pathname: '/pdf/[folderId]',
-      params: { folderId, path: entry.relativePath },
-    });
+    const pathname =
+      entry.kind === 'pdf'
+        ? '/pdf/[folderId]'
+        : entry.kind === 'image'
+          ? '/image/[folderId]'
+          : '/text/[folderId]';
+    router.push({ pathname, params: { folderId, path: entry.relativePath } });
   }
 
   async function toggleFavourite(entry: LibraryEntry) {
@@ -169,8 +198,7 @@ export default function FolderScreen() {
     if (!renameTarget) {
       return;
     }
-    const name = renameTarget.kind === 'pdf' ? normalizePdfName(value) : validateItemName(value);
-    renameEntry(folderId, renameTarget.relativePath, renameTarget.kind, name);
+    const name = renameEntry(folderId, renameTarget.relativePath, renameTarget.kind, value);
     const nextPath = joinRelativePath(parentRelativePath(renameTarget.relativePath), name);
     const nextFavourites = remapFavouritePaths(
       favouritePaths,
@@ -194,7 +222,7 @@ export default function FolderScreen() {
       `Delete “${entry.name}”?`,
       entry.kind === 'directory'
         ? 'This permanently removes the folder and everything inside it.'
-        : 'This permanently removes the PDF from StudyStuff.',
+        : 'This permanently removes the file from StudyStuff.',
       [
         { style: 'cancel', text: 'Cancel' },
         {
@@ -230,12 +258,12 @@ export default function FolderScreen() {
             <Pressable
               accessibilityLabel="Add to folder"
               accessibilityRole="button"
-              accessibilityState={{ busy: addingPdfs, disabled: addingPdfs }}
+              accessibilityState={{ busy: addingFiles, disabled: addingFiles }}
               className="h-11 w-11 items-center justify-center rounded-full active:bg-line/50"
-              disabled={addingPdfs}
+              disabled={addingFiles}
               hitSlop={8}
               onPress={() => setAddSheetVisible(true)}>
-              {addingPdfs ? (
+              {addingFiles ? (
                 <ActivityIndicator color={colors.purple} />
               ) : (
                 <Plus color={colors.ink} size={25} />
@@ -245,7 +273,7 @@ export default function FolderScreen() {
         }}
       />
 
-      <View className="flex-1" pointerEvents={addingPdfs ? 'none' : 'auto'}>
+      <View className="flex-1" pointerEvents={addingFiles ? 'none' : 'auto'}>
         {error ? (
           <View className="m-5 rounded-2xl border border-danger bg-paper-raised px-5 py-4">
             <AppText variant="label" className="text-danger">
@@ -299,7 +327,7 @@ export default function FolderScreen() {
                   Nothing here yet
                 </AppText>
                 <AppText variant="caption" className="mt-2 text-center">
-                  Add PDFs or a subfolder with the &quot;+&quot; button at the top.
+                  Add files or a subfolder with the &quot;+&quot; button at the top.
                 </AppText>
               </View>
             }
@@ -321,10 +349,26 @@ export default function FolderScreen() {
         onDismiss={() => setAddSheetVisible(false)}>
         <ActionRow
           icon={FilePlus2}
-          label="Import PDF"
+          label="Import file"
           onPress={() => {
             setAddSheetVisible(false);
-            void addPdfs();
+            void addFiles('picker');
+          }}
+        />
+        <ActionRow
+          icon={Camera}
+          label="Take picture"
+          onPress={() => {
+            setAddSheetVisible(false);
+            void addFiles('camera');
+          }}
+        />
+        <ActionRow
+          icon={FileText}
+          label="Create empty text file"
+          onPress={() => {
+            setAddSheetVisible(false);
+            setNewTextDialogVisible(true);
           }}
         />
         <ActionRow
@@ -376,11 +420,18 @@ export default function FolderScreen() {
         onSubmit={createNamedSubfolder}
       />
       <NameDialog
+        inputLabel="Text file name"
+        title="Create empty text file"
+        visible={newTextDialogVisible}
+        onClose={() => setNewTextDialogVisible(false)}
+        onSubmit={createNamedTextFile}
+      />
+      <NameDialog
         centerInTopHalf
         confirmLabel="Rename"
         initialValue={renameTarget?.name}
-        inputLabel={renameTarget?.kind === 'pdf' ? 'PDF name' : 'Folder name'}
-        title={`Rename ${renameTarget?.kind === 'directory' ? 'Folder' : 'PDF'}`}
+        inputLabel={renameTarget?.kind === 'directory' ? 'Folder name' : 'File name'}
+        title={`Rename ${renameTarget?.kind === 'directory' ? 'Folder' : 'File'}`}
         visible={Boolean(renameTarget)}
         onClose={() => setRenameTarget(null)}
         onSubmit={submitRename}

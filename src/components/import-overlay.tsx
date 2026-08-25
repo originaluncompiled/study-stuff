@@ -19,10 +19,10 @@ export function ImportOverlay({ progress, visible }: { progress: ImportProgress;
           <AppText
             accessibilityLiveRegion="polite"
             accessibilityRole="progressbar"
-            accessibilityValue={{ text: `${progress.copiedPdfs} PDFs copied` }}
+            accessibilityValue={{ text: `${progress.copiedFiles} files copied` }}
             variant="label"
             className="mt-2 text-purple">
-            {progress.copiedPdfs} {progress.copiedPdfs === 1 ? 'PDF' : 'PDFs'} copied
+            {progress.copiedFiles} {progress.copiedFiles === 1 ? 'file' : 'files'} copied
           </AppText>
           <AppText variant="caption" className="mt-2 text-center" numberOfLines={2}>
             {progress.currentName || 'Scanning nested folders…'}

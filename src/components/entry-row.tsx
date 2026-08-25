@@ -1,4 +1,4 @@
-import { FileText, Folder, MoreHorizontal, Star } from 'lucide-react-native';
+import { File, FileText, Folder, Image as ImageIcon, MoreHorizontal, Star } from 'lucide-react-native';
 import { useState } from 'react';
 import { Pressable, View } from 'react-native';
 
@@ -20,8 +20,10 @@ export function EntryRow({
   const [pressed, setPressed] = useState(false);
   const [menuPressed, setMenuPressed] = useState(false);
   const isDirectory = entry.kind === 'directory';
-  const Icon = isDirectory ? Folder : FileText;
-  const detail = isDirectory ? formatChildCount(entry.childCount) : formatFileSize(entry.size);
+  const Icon = isDirectory ? Folder : entry.kind === 'image' ? ImageIcon : FileText;
+  const detail = isDirectory
+    ? formatChildCount(entry.childCount)
+    : formatFileSize(entry.size, entry.kind as Exclude<LibraryEntry['kind'], 'directory'>);
   return (
     <View
       className="mb-3 flex-row items-stretch overflow-hidden rounded-[22px] border-2 border-ink"
@@ -39,7 +41,18 @@ export function EntryRow({
           </View>
         ) : null}
         <View className={`h-12 w-12 items-center justify-center rounded-xl ${isDirectory ? 'bg-purple' : 'bg-ink'}`}>
-          <Icon color={isDirectory ? colors.paperRaised : colors.paper} size={25} />
+          {entry.kind === 'pdf' ? (
+            <View className="h-8 w-8 items-center justify-center">
+              <File color={colors.paper} size={30} />
+              <View className="absolute bottom-1 rounded-sm bg-purple px-1">
+                <AppText variant="label" className="text-[7px] leading-[9px] text-white">
+                  PDF
+                </AppText>
+              </View>
+            </View>
+          ) : (
+            <Icon color={isDirectory ? colors.paperRaised : colors.paper} size={25} />
+          )}
         </View>
         <View className="ml-4 flex-1">
           <AppText variant="label" numberOfLines={2}>
@@ -80,9 +93,9 @@ function formatChildCount(count: number | null): string {
   return `${count} ${count === 1 ? 'item' : 'items'}`;
 }
 
-function formatFileSize(bytes: number | null): string {
+function formatFileSize(bytes: number | null, kind: Exclude<LibraryEntry['kind'], 'directory'>): string {
   if (bytes === null || bytes <= 0) {
-    return 'PDF document';
+    return kind === 'pdf' ? 'PDF document' : kind === 'image' ? 'Image' : 'Text file';
   }
   if (bytes < 1024 * 1024) {
     return `${Math.max(1, Math.round(bytes / 1024))} KB`;

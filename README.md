@@ -1,16 +1,20 @@
 # StudyStuff
 
-StudyStuff is an Android-first Expo app for organizing local PDF study material. It provides a two-column folder library, nested folder imports, and a native PDF reader with continuous vertical scrolling in both portrait and landscape.
+StudyStuff is an Android-first Expo app for organizing local study material. It provides a two-column folder library, nested folder imports, and focused viewers for PDFs, images, and plain-text notes.
 
 ## Features
 
 - Two-column folder library with the add tile fixed in the first position
 - Empty folder creation and recursive Android folder import
-- Nested folder browsing with multi-PDF addition
-- Rename and delete actions for folders and PDFs
+- Nested folder browsing with multi-file import, camera capture, and empty text-file creation
+- Rename and delete actions for folders and files
 - App-private local copies, so source permissions are not required after import
 - Native PDF rendering, pinch zoom, and unlocked device rotation
+- Sibling-image galleries with swipe navigation, pinch zoom, and thumbnails
+- Plain-text reading and explicit edit/save controls with unsaved-change protection
 - Crash-safe staging and recoverable per-folder metadata
+
+Supported files include PDFs, plain-text files, and common image formats such as JPEG, PNG, GIF, WebP, AVIF, HEIC, HEIF, SVG, APNG, and ICO.
 
 ## Requirements
 
@@ -52,4 +56,4 @@ npx expo-doctor
 
 Imported files are copied under Expo's persistent document directory in `StudyStuff/folders/<folder-id>`. AsyncStorage keeps the display order, while a hidden metadata file in each folder allows the index to be recovered if AsyncStorage is cleared or corrupted.
 
-Whole-folder import currently targets Android. Individual PDF picking and the rest of the architecture remain portable, but iOS recursive import requires separate security-scoped access testing before it should be enabled.
+Whole-folder import currently targets Android. Individual file picking and the rest of the architecture remain portable, but iOS recursive import requires separate security-scoped access testing before it should be enabled.

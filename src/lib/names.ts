@@ -56,8 +56,20 @@ export function getAvailableFileName(preferredName: string, names: Iterable<stri
 }
 
 export function normalizePdfName(value: string): string {
+  return normalizeFileName(value, '.pdf');
+}
+
+export function normalizeFileName(value: string, extension: string): string {
   const name = validateItemName(value);
-  return name.toLocaleLowerCase().endsWith('.pdf') ? name : `${name}.pdf`;
+  const normalizedExtension = extension.startsWith('.') ? extension : `.${extension}`;
+  const result = name.toLocaleLowerCase().endsWith(normalizedExtension.toLocaleLowerCase())
+    ? name
+    : `${name}${normalizedExtension}`;
+
+  if (result.length > MAX_ITEM_NAME_LENGTH) {
+    throw new Error(`Names can be at most ${MAX_ITEM_NAME_LENGTH} characters including the extension.`);
+  }
+  return result;
 }
 
 export function inferPickedFolderName(uriName: string): string {

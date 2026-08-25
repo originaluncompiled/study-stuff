@@ -1,8 +1,10 @@
 import type { LibraryEntry } from '@/types/library';
 
 export function compareLibraryEntries(left: LibraryEntry, right: LibraryEntry): number {
-  if (left.kind !== right.kind) {
-    return left.kind === 'directory' ? -1 : 1;
+  const leftIsDirectory = left.kind === 'directory';
+  const rightIsDirectory = right.kind === 'directory';
+  if (leftIsDirectory !== rightIsDirectory) {
+    return leftIsDirectory ? -1 : 1;
   }
   return left.name.localeCompare(right.name, undefined, { numeric: true, sensitivity: 'base' });
 }

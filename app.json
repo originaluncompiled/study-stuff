@@ -41,20 +41,29 @@
       [
         "expo-splash-screen",
         {
-           "backgroundColor": "#F7F1E3",
-           "image": "./assets/images/splash-icon.png",
-           "imageWidth": 220
-         }
-       ],
-       [
-         "expo-status-bar",
-         {
-           "hidden": false,
-           "style": "dark"
-         }
-       ],
-       "@config-plugins/react-native-pdf",
-       "@config-plugins/react-native-blob-util"
+          "backgroundColor": "#F7F1E3",
+          "image": "./assets/images/splash-icon.png",
+          "imageWidth": 220
+        }
+      ],
+      [
+        "expo-status-bar",
+        {
+          "hidden": false,
+          "style": "dark"
+        }
+      ],
+      "@config-plugins/react-native-pdf",
+      "@config-plugins/react-native-blob-util",
+      "expo-image",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": false,
+          "cameraPermission": "Allow StudyStuff to take pictures for your study folders.",
+          "microphonePermission": false
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

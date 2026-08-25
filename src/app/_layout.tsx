@@ -86,6 +86,14 @@ export default function RootLayout() {
               headerTitleStyle: { fontFamily: 'DMSans_600SemiBold' },
             }}
           />
+          <Stack.Screen
+            name="image/[folderId]"
+            options={{
+              headerShown: false,
+              contentStyle: { backgroundColor: colors.ink },
+            }}
+          />
+          <Stack.Screen name="text/[folderId]" options={{ headerShown: false }} />
         </Stack>
         <TimerRuntime />
       </ThemeProvider>
