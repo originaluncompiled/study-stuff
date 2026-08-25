@@ -172,7 +172,7 @@ describe('PdfScreen', () => {
     expect(view.queryByTestId('pdf-timer-running-icon')).toBeNull();
   });
 
-  test('keeps viewport padding out of the full-screen zoom surface', async () => {
+  test('uses document padding without resizing the full-screen zoom surface', async () => {
     const { width } = Dimensions.get('window');
     const view = await render(
       <SafeAreaProvider
@@ -195,8 +195,15 @@ describe('PdfScreen', () => {
     expect(pdf.props.style).toMatchObject({ flex: 1 });
     expect(pdf.props.style).not.toHaveProperty('paddingBottom');
     expect(pdf.props.style).not.toHaveProperty('paddingTop');
-    expect(pdf.props.scale).toBeCloseTo((width - 16) / width);
-    expect(pdf.props.minScale).toBeCloseTo((width - 16) / width);
+    expect(pdf.props.contentPadding).toEqual({
+      top: 99,
+      right: 8,
+      bottom: 8,
+      left: 8,
+    });
+    expect(pdf.props.scale).toBeUndefined();
+    expect(pdf.props.minScale).toBeUndefined();
+    expect(pdf.props.maxScale).toBe(5);
   });
 
   test('hides the overlay header without resizing the PDF page', async () => {
@@ -222,6 +229,7 @@ describe('PdfScreen', () => {
     expect(view.getByTestId('pdf-header').props.className).toContain('absolute');
     const initialViewportLayout = view.getByTestId('pdf-viewport').props.style[0];
     const initialPdfLayout = pdf.props.style;
+    const initialContentPadding = pdf.props.contentPadding;
     expect(initialViewportLayout).toMatchObject({
       flex: 1,
     });
@@ -246,6 +254,7 @@ describe('PdfScreen', () => {
     expect(view.getByTestId('stack-screen-options').props.options.headerShown).toBe(false);
     expect(view.getByTestId('pdf-status-bar').props.hidden).toBe(true);
     expect(pdf.props.style).toEqual(initialPdfLayout);
+    expect(pdf.props.contentPadding).toEqual(initialContentPadding);
     const hiddenHeader = view.getByTestId('pdf-header', { includeHiddenElements: true });
     expect(hiddenHeader.props.pointerEvents).toBe('none');
     await act(() => new Promise((resolve) => setTimeout(resolve, 250)));
@@ -259,6 +268,7 @@ describe('PdfScreen', () => {
       'transform',
     );
     expect(view.getByTestId('pdf-viewport').props.style[0]).toEqual(initialViewportLayout);
+    expect(pdf.props.contentPadding).toEqual(initialContentPadding);
 
     await fireEvent(view.getByTestId('pdf-viewer-container'), 'touchEnd');
     await fireEvent(view.getByTestId('pdf-viewer-container'), 'touchStart', {

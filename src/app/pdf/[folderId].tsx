@@ -4,7 +4,9 @@ import { AlertCircle, ChevronLeft, Clock3, Coffee, Pause } from 'lucide-react-na
 import { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  Platform,
   Pressable,
+  StatusBar as NativeStatusBar,
   View,
   useWindowDimensions,
   type GestureResponderEvent,
@@ -44,6 +46,14 @@ export default function PdfScreen() {
   const insets = useSafeAreaInsets();
   const rawPath = Array.isArray(params.path) ? params.path[0] : params.path;
   const { width, height } = useWindowDimensions();
+  const orientation: PdfOrientation = width > height ? 'landscape' : 'portrait';
+  const measuredHeaderTopInset =
+    Platform.OS === 'android'
+      ? Math.max(insets.top, NativeStatusBar.currentHeight ?? 0)
+      : insets.top;
+  const [headerTopInsets, setHeaderTopInsets] = useState<Partial<Record<PdfOrientation, number>>>(
+    () => ({ [orientation]: measuredHeaderTopInset }),
+  );
   const [loading, setLoading] = useState(true);
   const [viewerError, setViewerError] = useState<string | null>(null);
   const [resolution, setResolution] = useState<PdfResolution | null>(null);
@@ -86,9 +96,11 @@ export default function PdfScreen() {
         ? `${timerPhase}:paused:${timerRemainingMs}`
         : null;
   const timerManagerVisible = timerSession !== null && timerManagerSession === timerSession;
-  const headerTopInset = insets.top;
+  const headerTopInset = Math.max(
+    headerTopInsets[orientation] ?? measuredHeaderTopInset,
+    measuredHeaderTopInset,
+  );
   const headerHeight = headerTopInset + PDF_HEADER_CONTENT_HEIGHT;
-  const initialPdfScale = Math.max((width - PDF_PAGE_INSET * 2) / width, 0.1);
   const scrubberTop = headerHeight + 12;
   const scrubberBottom = Math.max(insets.bottom, 12) + 12;
   const availableScrubberTravel = Math.max(
@@ -106,6 +118,18 @@ export default function PdfScreen() {
   const scrubberHandleAnimatedStyle = useAnimatedStyle(() => ({
     transform: [{ translateY: scrubberOffset.get() }],
   }));
+
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      setHeaderTopInsets((currentInsets) => {
+        if ((currentInsets[orientation] ?? 0) >= measuredHeaderTopInset) {
+          return currentInsets;
+        }
+        return { ...currentInsets, [orientation]: measuredHeaderTopInset };
+      });
+    }, 0);
+    return () => clearTimeout(timeout);
+  }, [measuredHeaderTopInset, orientation]);
 
   useEffect(() => {
     const timeout = setTimeout(() => {
@@ -381,11 +405,16 @@ export default function PdfScreen() {
               },
             ]}>
             <Pdf
+              contentPadding={{
+                top: headerHeight + PDF_PAGE_INSET,
+                right: PDF_PAGE_INSET,
+                bottom: PDF_PAGE_INSET,
+                left: PDF_PAGE_INSET,
+              }}
               enablePaging={false}
               fitPolicy={0}
               horizontal={false}
               maxScale={5}
-              minScale={initialPdfScale}
               onError={(pdfError) => {
                 setLoading(false);
                 setViewerError(pdfError instanceof Error ? pdfError.message : String(pdfError));
@@ -396,7 +425,6 @@ export default function PdfScreen() {
               }}
               onPageChanged={updateHeaderForPage}
               ref={pdfRef}
-              scale={initialPdfScale}
               source={{ uri }}
               spacing={8}
               style={{
@@ -556,6 +584,8 @@ type PdfResolution = {
   fileName: string;
   uri: string | null;
 };
+
+type PdfOrientation = 'landscape' | 'portrait';
 
 function resolvePdf(folderId: string, rawPath: string | undefined): PdfResolution {
   try {

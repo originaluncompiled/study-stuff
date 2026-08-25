@@ -1,8 +1,108 @@
+diff --git a/node_modules/react-native-pdf/android/build.gradle b/node_modules/react-native-pdf/android/build.gradle
+index 34da324..5f7e203 100644
+--- a/node_modules/react-native-pdf/android/build.gradle
++++ b/node_modules/react-native-pdf/android/build.gradle
+@@ -139,9 +139,8 @@ dependencies {
+     } else {
+         implementation 'com.facebook.react:react-native:+'
+     }
+-    // NOTE: The original repo at com.github.barteksc is abandoned by the maintainer; there will be no more updates coming from that repo.
+-    // The repo from zacharee is based on PdfiumAndroidKt, a much newer fork of PdfiumAndroid, with better maintenance and updated native libraries.
+-    implementation 'com.github.zacharee:AndroidPdfViewer:4.0.1'
++    // Use a maintained AndroidPdfViewer fork that provides document content padding.
++    implementation 'com.github.kishannareshpal:AndroidPdfViewer:2026.02.03.1'
+     // Depend on PdfiumAndroidKt directly so this can be updated independently of AndroidPdfViewer as updates are provided.
+     implementation 'io.legere:pdfiumandroid:1.0.32'
+     implementation 'com.google.code.gson:gson:2.13.2'
+diff --git a/node_modules/react-native-pdf/android/src/main/java/org/wonday/pdf/PdfManager.java b/node_modules/react-native-pdf/android/src/main/java/org/wonday/pdf/PdfManager.java
+index 03c60d5..4a49e78 100644
+--- a/node_modules/react-native-pdf/android/src/main/java/org/wonday/pdf/PdfManager.java
++++ b/node_modules/react-native-pdf/android/src/main/java/org/wonday/pdf/PdfManager.java
+@@ -122,6 +122,30 @@ public class PdfManager extends SimpleViewManager<PdfView> implements RNPDFPdfVi
+         pdfView.setSpacing(spacing);
+     }
+ 
++    @Override
++    @ReactProp(name = "contentPaddingTop")
++    public void setContentPaddingTop(PdfView pdfView, float contentPaddingTop) {
++        pdfView.setContentPaddingTop(contentPaddingTop);
++    }
++
++    @Override
++    @ReactProp(name = "contentPaddingRight")
++    public void setContentPaddingRight(PdfView pdfView, float contentPaddingRight) {
++        pdfView.setContentPaddingRight(contentPaddingRight);
++    }
++
++    @Override
++    @ReactProp(name = "contentPaddingBottom")
++    public void setContentPaddingBottom(PdfView pdfView, float contentPaddingBottom) {
++        pdfView.setContentPaddingBottom(contentPaddingBottom);
++    }
++
++    @Override
++    @ReactProp(name = "contentPaddingLeft")
++    public void setContentPaddingLeft(PdfView pdfView, float contentPaddingLeft) {
++        pdfView.setContentPaddingLeft(contentPaddingLeft);
++    }
++
+     @ReactProp(name = "password")
+     public void setPassword(PdfView pdfView, String password) {
+         pdfView.setPassword(password);
 diff --git a/node_modules/react-native-pdf/android/src/main/java/org/wonday/pdf/PdfView.java b/node_modules/react-native-pdf/android/src/main/java/org/wonday/pdf/PdfView.java
-index c3d3245..567e3b8 100644
+index c3d3245..186e792 100644
 --- a/node_modules/react-native-pdf/android/src/main/java/org/wonday/pdf/PdfView.java
 +++ b/node_modules/react-native-pdf/android/src/main/java/org/wonday/pdf/PdfView.java
-@@ -424,6 +424,7 @@ public class PdfView extends PDFView implements OnPageChangeListener,OnLoadCompl
+@@ -72,6 +72,10 @@ public class PdfView extends PDFView implements OnPageChangeListener,OnLoadCompl
+     private float maxScale = 3;
+     private String path;
+     private int spacing = 10;
++    private int contentPaddingTop = 0;
++    private int contentPaddingRight = 0;
++    private int contentPaddingBottom = 0;
++    private int contentPaddingLeft = 0;
+     private String password = "";
+     private boolean enableAntialiasing = true;
+     private boolean enableAnnotationRendering = true;
+@@ -150,11 +154,18 @@ public class PdfView extends PDFView implements OnPageChangeListener,OnLoadCompl
+     // to set the dimensions to zero after first measurement.
+     @Override
+     protected void onSizeChanged(int w, int h, int oldw, int oldh) {
++        boolean shouldRestorePosition = w > 0 && h > 0 && !this.isRecycled()
++            && this.getPageCount() > 0 && !this.documentFitsView();
++        float positionOffset = shouldRestorePosition ? this.getPositionOffset() : 0;
+         if ((w > 0 && h > 0) || this.oldW > 0 || this.oldH > 0) {
+             super.onSizeChanged(w, h, this.oldW, this.oldH);
+             this.oldW = w;
+             this.oldH = h;
+         }
++        if (shouldRestorePosition && !Float.isNaN(positionOffset) && !Float.isInfinite(positionOffset)) {
++            this.setPositionOffset(positionOffset, false);
++            this.loadPageByOffset();
++        }
+     }
+ 
+     @Override
+@@ -375,11 +386,18 @@ public class PdfView extends PDFView implements OnPageChangeListener,OnLoadCompl
+                 .onDraw(this)
+                 .onPageScroll(this)
+                 .spacing(this.spacing)
++                .contentPadding(
++                    this.contentPaddingLeft,
++                    this.contentPaddingTop,
++                    this.contentPaddingRight,
++                    this.contentPaddingBottom
++                )
+                 .password(this.password)
+                 .enableAntialiasing(this.enableAntialiasing)
+                 .pageFitPolicy(this.fitPolicy)
+                 .pageSnap(this.pageSnap)
+                 .autoSpacing(this.autoSpacing)
++                .autoCenterOnResize(false)
+                 .pageFling(this.pageFling)
+                 .enableSwipe(!this.singlePage && this.scrollEnabled)
+                 .enableDoubletap(!this.singlePage && this.enableDoubleTapZoom)
+@@ -424,6 +442,7 @@ public class PdfView extends PDFView implements OnPageChangeListener,OnLoadCompl
  
      // page start from 1
      public void setPage(int page) {
@@ -10,3 +110,400 @@ index c3d3245..567e3b8 100644
          this.page = Math.max(page, 1);
          this.handlePage(this.page - 1);
      }
+@@ -456,6 +475,22 @@ public class PdfView extends PDFView implements OnPageChangeListener,OnLoadCompl
+         this.spacing = spacing;
+     }
+ 
++    public void setContentPaddingTop(float top) {
++        this.contentPaddingTop = Math.round(top);
++    }
++
++    public void setContentPaddingRight(float right) {
++        this.contentPaddingRight = Math.round(right);
++    }
++
++    public void setContentPaddingBottom(float bottom) {
++        this.contentPaddingBottom = Math.round(bottom);
++    }
++
++    public void setContentPaddingLeft(float left) {
++        this.contentPaddingLeft = Math.round(left);
++    }
++
+     public void setPassword(String password) {
+         this.password = password;
+     }
+diff --git a/node_modules/react-native-pdf/android/src/paper/java/com/facebook/react/viewmanagers/RNPDFPdfViewManagerDelegate.java b/node_modules/react-native-pdf/android/src/paper/java/com/facebook/react/viewmanagers/RNPDFPdfViewManagerDelegate.java
+index 43848d9..a39a51c 100644
+--- a/node_modules/react-native-pdf/android/src/paper/java/com/facebook/react/viewmanagers/RNPDFPdfViewManagerDelegate.java
++++ b/node_modules/react-native-pdf/android/src/paper/java/com/facebook/react/viewmanagers/RNPDFPdfViewManagerDelegate.java
+@@ -71,6 +71,18 @@ public class RNPDFPdfViewManagerDelegate<T extends View, U extends BaseViewManag
+       case "spacing":
+         mViewManager.setSpacing(view, value == null ? 0 : ((Double) value).intValue());
+         break;
++      case "contentPaddingTop":
++        mViewManager.setContentPaddingTop(view, value == null ? 0f : ((Double) value).floatValue());
++        break;
++      case "contentPaddingRight":
++        mViewManager.setContentPaddingRight(view, value == null ? 0f : ((Double) value).floatValue());
++        break;
++      case "contentPaddingBottom":
++        mViewManager.setContentPaddingBottom(view, value == null ? 0f : ((Double) value).floatValue());
++        break;
++      case "contentPaddingLeft":
++        mViewManager.setContentPaddingLeft(view, value == null ? 0f : ((Double) value).floatValue());
++        break;
+       case "password":
+         mViewManager.setPassword(view, value == null ? null : (String) value);
+         break;
+diff --git a/node_modules/react-native-pdf/android/src/paper/java/com/facebook/react/viewmanagers/RNPDFPdfViewManagerInterface.java b/node_modules/react-native-pdf/android/src/paper/java/com/facebook/react/viewmanagers/RNPDFPdfViewManagerInterface.java
+index 397268f..7ca914c 100644
+--- a/node_modules/react-native-pdf/android/src/paper/java/com/facebook/react/viewmanagers/RNPDFPdfViewManagerInterface.java
++++ b/node_modules/react-native-pdf/android/src/paper/java/com/facebook/react/viewmanagers/RNPDFPdfViewManagerInterface.java
+@@ -29,6 +29,10 @@ public interface RNPDFPdfViewManagerInterface<T extends View> {
+   void setEnableAntialiasing(T view, boolean value);
+   void setFitPolicy(T view, int value);
+   void setSpacing(T view, int value);
++  void setContentPaddingTop(T view, float value);
++  void setContentPaddingRight(T view, float value);
++  void setContentPaddingBottom(T view, float value);
++  void setContentPaddingLeft(T view, float value);
+   void setPassword(T view, @Nullable String value);
+   void setSinglePage(T view, boolean value);
+   void setNativePage(T view, int page);
+diff --git a/node_modules/react-native-pdf/fabric/RNPDFPdfNativeComponent.js b/node_modules/react-native-pdf/fabric/RNPDFPdfNativeComponent.js
+index 43fea3b..1ce155e 100644
+--- a/node_modules/react-native-pdf/fabric/RNPDFPdfNativeComponent.js
++++ b/node_modules/react-native-pdf/fabric/RNPDFPdfNativeComponent.js
+@@ -29,6 +29,10 @@
+    enableDoubleTapZoom: ?boolean,
+    fitPolicy: ?Int32,
+    spacing: ?Int32,
++   contentPaddingTop: ?Float,
++   contentPaddingRight: ?Float,
++   contentPaddingBottom: ?Float,
++   contentPaddingLeft: ?Float,
+    password: ?string,
+    onChange: ?BubblingEventHandler<ChangeEvent>,
+    singlePage: ?boolean,
+diff --git a/node_modules/react-native-pdf/index.d.ts b/node_modules/react-native-pdf/index.d.ts
+index d8192b2..7461c08 100644
+--- a/node_modules/react-native-pdf/index.d.ts
++++ b/node_modules/react-native-pdf/index.d.ts
+@@ -31,6 +31,13 @@ export type PdfError = Error & {
+     status?: number;
+ };
+ 
++export type ContentPadding = {
++    top?: number;
++    right?: number;
++    bottom?: number;
++    left?: number;
++};
++
+ export type TextSelectionChangeEvent = {
+   nativeEvent:
+     | {
+@@ -55,6 +62,7 @@ export interface PdfProps {
+     showsVerticalScrollIndicator?: boolean,
+     scrollEnabled?: boolean,
+     spacing?: number,
++    contentPadding?: ContentPadding,
+     password?: string,
+     renderActivityIndicator?: (progress: number) => React.ReactElement,
+     enableAntialiasing?: boolean,
+diff --git a/node_modules/react-native-pdf/index.js b/node_modules/react-native-pdf/index.js
+index 916faa5..58389cb 100644
+--- a/node_modules/react-native-pdf/index.js
++++ b/node_modules/react-native-pdf/index.js
+@@ -53,6 +53,12 @@ export default class Pdf extends Component {
+         maxScale: PropTypes.number,
+         horizontal: PropTypes.bool,
+         spacing: PropTypes.number,
++        contentPadding: PropTypes.shape({
++            top: PropTypes.number,
++            right: PropTypes.number,
++            bottom: PropTypes.number,
++            left: PropTypes.number,
++        }),
+         password: PropTypes.string,
+         renderActivityIndicator: PropTypes.func,
+         enableAntialiasing: PropTypes.bool,
+@@ -90,6 +96,12 @@ export default class Pdf extends Component {
+         minScale: 1,
+         maxScale: 3,
+         spacing: 10,
++        contentPadding: {
++            top: 0,
++            right: 0,
++            bottom: 0,
++            left: 0,
++        },
+         fitPolicy: 2, //fit both
+         horizontal: false,
+         page: 1,
+@@ -450,6 +462,7 @@ export default class Pdf extends Component {
+     };
+ 
+     render() {
++        const {contentPadding, ...nativeProps} = this.props;
+         if (Platform.OS === "android" || Platform.OS === "ios" || Platform.OS === "windows") {
+                 return (
+                     <View style={[this.props.style,{overflow: 'hidden'}]}>
+@@ -464,7 +477,11 @@ export default class Pdf extends Component {
+                                 Platform.OS === "android" || Platform.OS === "windows"?(
+                                         <PdfCustom
+                                             ref={component => (this._root = component)}
+-                                            {...this.props}
++                                            {...nativeProps}
++                                            contentPaddingTop={contentPadding.top}
++                                            contentPaddingRight={contentPadding.right}
++                                            contentPaddingBottom={contentPadding.bottom}
++                                            contentPaddingLeft={contentPadding.left}
+                                             style={[{flex:1,backgroundColor: '#EEE'}, this.props.style]}
+                                             path={this.state.path}
+                                             onChange={this._onChange}
+@@ -473,13 +490,17 @@ export default class Pdf extends Component {
+                                         this.props.usePDFKit ?(
+                                                 <PdfCustom
+                                                     ref={component => (this._root = component)}
+-                                                    {...this.props}
++                                                    {...nativeProps}
++                                                    contentPaddingTop={contentPadding.top}
++                                                    contentPaddingRight={contentPadding.right}
++                                                    contentPaddingBottom={contentPadding.bottom}
++                                                    contentPaddingLeft={contentPadding.left}
+                                                     style={[{backgroundColor: '#EEE',overflow: 'hidden'}, this.props.style]}
+                                                     path={this.state.path}
+                                                     onChange={this._onChange}
+                                                 />
+                                             ):(React.createElement(getPdfView(), {
+-                                                ...this.props,
++                                                ...nativeProps,
+                                                 style: [{backgroundColor: '#EEE',overflow: 'hidden'}, this.props.style],
+                                                 path: this.state.path,
+                                                 onLoadComplete: this.props.onLoadComplete,
+diff --git a/node_modules/react-native-pdf/index.js.flow b/node_modules/react-native-pdf/index.js.flow
+index 5f50303..b082d18 100644
+--- a/node_modules/react-native-pdf/index.js.flow
++++ b/node_modules/react-native-pdf/index.js.flow
+@@ -33,6 +33,13 @@ export type TableContent = {
+   title: string,
+ };
+ 
++export type ContentPadding = {
++  top?: number,
++  right?: number,
++  bottom?: number,
++  left?: number,
++};
++
+ export type Props = {
+   renderActivityIndicator?: (progress: number) => Node,
+   enableAnnotationRendering?: boolean,
+@@ -60,6 +67,7 @@ export type Props = {
+   scale?: number,
+   source: AssetId | Source,
+   spacing?: number,
++  contentPadding?: ContentPadding,
+   style?: ViewStyleProp,
+   testID?: string
+ };
+diff --git a/node_modules/react-native-pdf/ios/RNPDFPdf/RNPDFPdfView.h b/node_modules/react-native-pdf/ios/RNPDFPdf/RNPDFPdfView.h
+index 723ca7b..37bae0f 100644
+--- a/node_modules/react-native-pdf/ios/RNPDFPdf/RNPDFPdfView.h
++++ b/node_modules/react-native-pdf/ios/RNPDFPdf/RNPDFPdfView.h
+@@ -49,6 +49,10 @@ UIView
+ @property(nonatomic) BOOL enableDoubleTapZoom;
+ @property(nonatomic) int fitPolicy;
+ @property(nonatomic) int spacing;
++@property(nonatomic) float contentPaddingTop;
++@property(nonatomic) float contentPaddingRight;
++@property(nonatomic) float contentPaddingBottom;
++@property(nonatomic) float contentPaddingLeft;
+ @property(nonatomic, strong) NSString *password;
+ @property(nonatomic) BOOL singlePage;
+ 
+diff --git a/node_modules/react-native-pdf/ios/RNPDFPdf/RNPDFPdfView.mm b/node_modules/react-native-pdf/ios/RNPDFPdf/RNPDFPdfView.mm
+index 1bc263b..8f7bcc3 100644
+--- a/node_modules/react-native-pdf/ios/RNPDFPdf/RNPDFPdfView.mm
++++ b/node_modules/react-native-pdf/ios/RNPDFPdf/RNPDFPdfView.mm
+@@ -154,6 +154,22 @@ using namespace facebook::react;
+         _spacing = newProps.spacing;
+         [updatedPropNames addObject:@"spacing"];
+     }
++    if (_contentPaddingTop != newProps.contentPaddingTop) {
++        _contentPaddingTop = newProps.contentPaddingTop;
++        [updatedPropNames addObject:@"contentPaddingTop"];
++    }
++    if (_contentPaddingRight != newProps.contentPaddingRight) {
++        _contentPaddingRight = newProps.contentPaddingRight;
++        [updatedPropNames addObject:@"contentPaddingRight"];
++    }
++    if (_contentPaddingBottom != newProps.contentPaddingBottom) {
++        _contentPaddingBottom = newProps.contentPaddingBottom;
++        [updatedPropNames addObject:@"contentPaddingBottom"];
++    }
++    if (_contentPaddingLeft != newProps.contentPaddingLeft) {
++        _contentPaddingLeft = newProps.contentPaddingLeft;
++        [updatedPropNames addObject:@"contentPaddingLeft"];
++    }
+     if (_password != RCTNSStringFromStringNilIfEmpty(newProps.password)) {
+         _password = RCTNSStringFromStringNilIfEmpty(newProps.password);
+         [updatedPropNames addObject:@"password"];
+@@ -260,6 +276,10 @@ using namespace facebook::react;
+     _enableDoubleTapZoom = YES;
+     _fitPolicy = 2;
+     _spacing = 10;
++    _contentPaddingTop = 0;
++    _contentPaddingRight = 0;
++    _contentPaddingBottom = 0;
++    _contentPaddingLeft = 0;
+     _singlePage = NO;
+     _showsHorizontalScrollIndicator = YES;
+     _showsVerticalScrollIndicator = YES;
+@@ -342,6 +362,49 @@ using namespace facebook::react;
+     }
+ }
+ 
++- (UIScrollView *)scrollViewInView:(UIView *)view
++{
++    if ([view isKindOfClass:[UIScrollView class]]) {
++        return (UIScrollView *)view;
++    }
++    for (UIView *subview in view.subviews) {
++        UIScrollView *scrollView = [self scrollViewInView:subview];
++        if (scrollView != nil) {
++            return scrollView;
++        }
++    }
++    return nil;
++}
++
++- (UIScrollView *)pdfScrollView
++{
++    for (UIView *subview in _pdfView.subviews) {
++        if ([subview isKindOfClass:[UIScrollView class]]) {
++            return (UIScrollView *)subview;
++        }
++    }
++    return [self scrollViewInView:_pdfView];
++}
++
++- (void)applyContentPadding
++{
++    UIScrollView *scrollView = [self pdfScrollView];
++    if (scrollView == nil) {
++        return;
++    }
++
++    // PDFKit applies page break margins at the document edges too. Remove that
++    // contribution so contentPadding remains the exact requested outer inset.
++    UIEdgeInsets margins = _pdfView.pageBreakMargins;
++    CGFloat scale = _pdfView.scaleFactor;
++    scrollView.contentInset = UIEdgeInsetsMake(
++        _contentPaddingTop - margins.top * scale,
++        _contentPaddingLeft - margins.left * scale,
++        _contentPaddingBottom - margins.bottom * scale,
++        _contentPaddingRight - margins.right * scale
++    );
++}
++
+ - (void)didSetProps:(NSArray<NSString *> *)changedProps
+ {
+     if (!_initialed) {
+@@ -441,10 +504,12 @@ using namespace facebook::react;
+             }
+         }
+ 
+-        if (_pdfDocument && ([changedProps containsObject:@"path"] || [changedProps containsObject:@"fitPolicy"] || [changedProps containsObject:@"minScale"] || [changedProps containsObject:@"maxScale"])) {
++        if (_pdfDocument && ([changedProps containsObject:@"path"] || [changedProps containsObject:@"fitPolicy"] || [changedProps containsObject:@"minScale"] || [changedProps containsObject:@"maxScale"] || [changedProps containsObject:@"contentPaddingTop"] || [changedProps containsObject:@"contentPaddingRight"] || [changedProps containsObject:@"contentPaddingBottom"] || [changedProps containsObject:@"contentPaddingLeft"])) {
+ 
+             PDFPage *pdfPage = _pdfView.currentPage ? _pdfView.currentPage : [_pdfDocument pageAtIndex:_pdfDocument.pageCount-1];
+             CGRect pdfPageRect = [pdfPage boundsForBox:kPDFDisplayBoxCropBox];
++            CGFloat availableWidth = MAX(self.frame.size.width - _contentPaddingLeft - _contentPaddingRight, 1);
++            CGFloat availableHeight = MAX(self.frame.size.height - _contentPaddingTop - _contentPaddingBottom, 1);
+ 
+             // some pdf with rotation, then adjust it
+             if (pdfPage.rotation == 90 || pdfPage.rotation == 270) {
+@@ -452,25 +517,25 @@ using namespace facebook::react;
+             }
+ 
+             if (_fitPolicy == 0) {
+-                _fixScaleFactor = self.frame.size.width/pdfPageRect.size.width;
++                _fixScaleFactor = availableWidth/pdfPageRect.size.width;
+                 _pdfView.scaleFactor = _scale * _fixScaleFactor;
+                 _pdfView.minScaleFactor = _fixScaleFactor*_minScale;
+                 _pdfView.maxScaleFactor = _fixScaleFactor*_maxScale;
+             } else if (_fitPolicy == 1) {
+-                _fixScaleFactor = self.frame.size.height/pdfPageRect.size.height;
++                _fixScaleFactor = availableHeight/pdfPageRect.size.height;
+                 _pdfView.scaleFactor = _scale * _fixScaleFactor;
+                 _pdfView.minScaleFactor = _fixScaleFactor*_minScale;
+                 _pdfView.maxScaleFactor = _fixScaleFactor*_maxScale;
+             } else {
+                 float pageAspect = pdfPageRect.size.width/pdfPageRect.size.height;
+-                float reactViewAspect = self.frame.size.width/self.frame.size.height;
++                float reactViewAspect = availableWidth/availableHeight;
+                 if (reactViewAspect>pageAspect) {
+-                    _fixScaleFactor = self.frame.size.height/pdfPageRect.size.height;
++                    _fixScaleFactor = availableHeight/pdfPageRect.size.height;
+                     _pdfView.scaleFactor = _scale * _fixScaleFactor;
+                     _pdfView.minScaleFactor = _fixScaleFactor*_minScale;
+                     _pdfView.maxScaleFactor = _fixScaleFactor*_maxScale;
+                 } else {
+-                    _fixScaleFactor = self.frame.size.width/pdfPageRect.size.width;
++                    _fixScaleFactor = availableWidth/pdfPageRect.size.width;
+                     _pdfView.scaleFactor = _scale * _fixScaleFactor;
+                     _pdfView.minScaleFactor = _fixScaleFactor*_minScale;
+                     _pdfView.maxScaleFactor = _fixScaleFactor*_maxScale;
+@@ -503,6 +568,10 @@ using namespace facebook::react;
+             }
+         }
+ 
++        if (_pdfDocument && ([changedProps containsObject:@"path"] || [changedProps containsObject:@"spacing"] || [changedProps containsObject:@"horizontal"] || [changedProps containsObject:@"enablePaging"] || [changedProps containsObject:@"contentPaddingTop"] || [changedProps containsObject:@"contentPaddingRight"] || [changedProps containsObject:@"contentPaddingBottom"] || [changedProps containsObject:@"contentPaddingLeft"])) {
++            [self applyContentPadding];
++        }
++
+         if (_pdfDocument && ([changedProps containsObject:@"path"] || [changedProps containsObject:@"singlePage"])) {
+             if (_singlePage) {
+                 _pdfView.displayMode = kPDFDisplaySinglePage;
+@@ -541,12 +610,9 @@ using namespace facebook::react;
+             if (pdfPage && _page == 1) {
+                 dispatch_async(dispatch_get_main_queue(), ^{
+                     [self->_pdfView goToFirstPage:nil];
+-                    for (UIView *subview in self->_pdfView.subviews) {
+-                        if ([subview isKindOfClass:[UIScrollView class]]) {
+-                            UIScrollView *scrollView = (UIScrollView *)subview;
+-                            [scrollView setContentOffset:CGPointMake(0, 0) animated:NO];
+-                            break;
+-                        }
++                    UIScrollView *scrollView = [self pdfScrollView];
++                    if (scrollView != nil) {
++                        [scrollView setContentOffset:CGPointMake(-scrollView.contentInset.left, -scrollView.contentInset.top) animated:NO];
+                     }
+                 });
+             } else if (pdfPage) {
+@@ -736,6 +802,7 @@ using namespace facebook::react;
+ {
+ 
+     if (_initialed && _fixScaleFactor>0) {
++        [self applyContentPadding];
+         if (_scale != _pdfView.scaleFactor/_fixScaleFactor) {
+             _scale = _pdfView.scaleFactor/_fixScaleFactor;
+             [self notifyOnChangeWithMessage:[[NSString alloc] initWithString:[NSString stringWithFormat:@"scaleChanged|%f", _scale]]];
+diff --git a/node_modules/react-native-pdf/ios/RNPDFPdf/RNPDFPdfViewManager.mm b/node_modules/react-native-pdf/ios/RNPDFPdf/RNPDFPdfViewManager.mm
+index 2dfa7f5..8c17317 100644
+--- a/node_modules/react-native-pdf/ios/RNPDFPdf/RNPDFPdfViewManager.mm
++++ b/node_modules/react-native-pdf/ios/RNPDFPdf/RNPDFPdfViewManager.mm
+@@ -42,6 +42,10 @@ RCT_EXPORT_VIEW_PROPERTY(enableAnnotationRendering, BOOL);
+ RCT_EXPORT_VIEW_PROPERTY(enableDoubleTapZoom, BOOL);
+ RCT_EXPORT_VIEW_PROPERTY(fitPolicy, int);
+ RCT_EXPORT_VIEW_PROPERTY(spacing, int);
++RCT_EXPORT_VIEW_PROPERTY(contentPaddingTop, float);
++RCT_EXPORT_VIEW_PROPERTY(contentPaddingRight, float);
++RCT_EXPORT_VIEW_PROPERTY(contentPaddingBottom, float);
++RCT_EXPORT_VIEW_PROPERTY(contentPaddingLeft, float);
+ RCT_EXPORT_VIEW_PROPERTY(password, NSString);
+ RCT_EXPORT_VIEW_PROPERTY(onChange, RCTBubblingEventBlock);
+ RCT_EXPORT_VIEW_PROPERTY(singlePage, BOOL);
