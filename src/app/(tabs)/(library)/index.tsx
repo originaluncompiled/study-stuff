@@ -238,7 +238,6 @@ export default function LibraryScreen() {
         visible={addSheetVisible}
         onDismiss={() => setAddSheetVisible(false)}>
         <ActionRow
-          description="Make a named folder, then add files to it."
           icon={FilePlus2}
           label="New empty folder"
           onPress={() => {

@@ -72,6 +72,10 @@ export default function FolderScreen() {
 
   const pathSegments = currentPath.split('/').filter(Boolean);
   const title = pathSegments.at(-1) || folder?.name || 'Folder';
+  const actionTargetIsFavourite = Boolean(
+    actionTarget && favouritePaths.has(actionTarget.relativePath),
+  );
+  const actionTargetType = actionTarget?.kind === 'directory' ? 'folder' : 'file';
   const breadcrumbSegments =
     folder && pathSegments.length > 0 ? [folder.name, ...pathSegments.slice(0, -1)] : [];
 
@@ -348,6 +352,7 @@ export default function FolderScreen() {
         visible={addSheetVisible}
         onDismiss={() => setAddSheetVisible(false)}>
         <ActionRow
+          description="Add a PDF, image or text file from device storage."
           icon={FilePlus2}
           label="Import file"
           onPress={() => {
@@ -386,15 +391,14 @@ export default function FolderScreen() {
         visible={Boolean(actionTarget)}
         onDismiss={() => setActionTarget(null)}>
         <ActionRow
+          description={
+            actionTargetIsFavourite
+              ? `Unpin ${actionTargetType} from the top of the list.`
+              : `Pin ${actionTargetType} to the top of the list.`
+          }
           icon={Star}
-          iconFill={
-            actionTarget && favouritePaths.has(actionTarget.relativePath) ? colors.ink : undefined
-          }
-          label={
-            actionTarget && favouritePaths.has(actionTarget.relativePath)
-              ? 'Unfavourite'
-              : 'Favourite'
-          }
+          iconFill={actionTargetIsFavourite ? colors.ink : undefined}
+          label={actionTargetIsFavourite ? 'Unfavourite' : 'Favourite'}
           onPress={() => actionTarget && void toggleFavourite(actionTarget)}
         />
         <ActionRow
