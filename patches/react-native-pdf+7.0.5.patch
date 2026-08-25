@@ -1,16 +1,71 @@
 diff --git a/node_modules/react-native-pdf/android/build.gradle b/node_modules/react-native-pdf/android/build.gradle
-index 34da324..5f7e203 100644
+index 34da324..c38cd9e 100644
 --- a/node_modules/react-native-pdf/android/build.gradle
 +++ b/node_modules/react-native-pdf/android/build.gradle
-@@ -139,9 +139,8 @@ dependencies {
+@@ -29,6 +29,19 @@ repositories {
+ }
+ 
+ apply plugin: 'com.android.library'
++apply plugin: 'org.jetbrains.kotlin.android'
++
++def androidPdfViewerSourcesConfiguration = configurations.create('androidPdfViewerSources') {
++    transitive = false
++}
++def androidPdfViewerSourcesDir = layout.buildDirectory.dir('generated/androidPdfViewerSources')
++def unpackAndroidPdfViewerSources = tasks.register('unpackAndroidPdfViewerSources', Sync) {
++    from { androidPdfViewerSourcesConfiguration.collect { zipTree(it) } }
++    into androidPdfViewerSourcesDir
++    include '**/*.kt'
++    // The app does not use the optional stock scroll handle, whose drawables live in the standalone AAR.
++    exclude '**/DefaultScrollHandle.kt'
++}
+ 
+ def supportsNamespace() {
+   def parsed = com.android.Version.ANDROID_GRADLE_PLUGIN_VERSION.tokenize('.')
+@@ -103,6 +116,11 @@ android {
+     }
+     compileSdkVersion safeExtGet('compileSdkVersion', 31)
+ 
++    compileOptions {
++        sourceCompatibility JavaVersion.VERSION_17
++        targetCompatibility JavaVersion.VERSION_17
++    }
++
+     defaultConfig {
+         minSdkVersion safeExtGet('minSdkVersion', 21)
+         targetSdkVersion safeExtGet('targetSdkVersion', 31)
+@@ -111,6 +129,7 @@ android {
+ 
+     sourceSets.main {
+         java {
++            srcDir androidPdfViewerSourcesDir
+             if (!isNewArchitectureEnabled()) {
+                 srcDirs += [
+                     "src/paper/java",
+@@ -133,15 +152,23 @@ android {
+     }
+ }
+ 
++tasks.configureEach { task ->
++    if (task.name.startsWith('compile') && task.name.endsWith('Kotlin')) {
++        task.dependsOn(unpackAndroidPdfViewerSources)
++    }
++}
++
+ dependencies {
+     if (isNewArchitectureEnabled() && getReactNativeMinorVersion() < 71) {
+         implementation project(":ReactAndroid")
      } else {
          implementation 'com.facebook.react:react-native:+'
      }
 -    // NOTE: The original repo at com.github.barteksc is abandoned by the maintainer; there will be no more updates coming from that repo.
 -    // The repo from zacharee is based on PdfiumAndroidKt, a much newer fork of PdfiumAndroid, with better maintenance and updated native libraries.
 -    implementation 'com.github.zacharee:AndroidPdfViewer:4.0.1'
-+    // Use a maintained AndroidPdfViewer fork that provides document content padding.
-+    implementation 'com.github.kishannareshpal:AndroidPdfViewer:2026.02.03.1'
++    // Compile the maintained fork from source because its published AAR targets Java 21,
++    // while Expo SDK 57's EAS Android image intentionally uses Java 17.
++    androidPdfViewerSources 'com.github.kishannareshpal:AndroidPdfViewer:2026.02.03.1:sources'
++    implementation 'androidx.core:core-ktx:1.17.0'
++    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2'
      // Depend on PdfiumAndroidKt directly so this can be updated independently of AndroidPdfViewer as updates are provided.
      implementation 'io.legere:pdfiumandroid:1.0.32'
      implementation 'com.google.code.gson:gson:2.13.2'
