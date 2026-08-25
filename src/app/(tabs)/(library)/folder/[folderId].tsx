@@ -6,6 +6,7 @@ import {
   FilePlus2,
   FileText,
   FolderPlus,
+  Image,
   Pencil,
   Plus,
   Star,
@@ -35,6 +36,7 @@ import {
   deleteEntry,
   listDirectory,
   pickAndCopyFiles,
+  pickAndCopyImages,
   renameEntry,
   takeAndCopyPhoto,
 } from '@/services/library-files';
@@ -121,22 +123,27 @@ export default function FolderScreen() {
     };
   }, [folderId]);
 
-  async function addFiles(source: 'picker' | 'camera') {
+  async function addFiles(source: 'files' | 'images' | 'camera') {
     if (addingFiles) {
       return;
     }
     setAddingFiles(true);
     try {
       const copied =
-        source === 'picker'
+        source === 'files'
           ? await pickAndCopyFiles(folderId, currentPath)
-          : await takeAndCopyPhoto(folderId, currentPath);
+          : source === 'images'
+            ? await pickAndCopyImages(folderId, currentPath)
+            : await takeAndCopyPhoto(folderId, currentPath);
       if (copied > 0) {
         void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         void touchFolder(folderId).catch(() => undefined);
       }
     } catch (error) {
-      Alert.alert(source === 'picker' ? 'Could not import files' : 'Could not take picture', getErrorMessage(error));
+      Alert.alert(
+        source === 'camera' ? 'Could not take picture' : 'Could not import files',
+        getErrorMessage(error),
+      );
     } finally {
       setRevision((value) => value + 1);
       setAddingFiles(false);
@@ -352,22 +359,40 @@ export default function FolderScreen() {
         visible={addSheetVisible}
         onDismiss={() => setAddSheetVisible(false)}>
         <ActionRow
-          description="Add a PDF, image or text file from device storage."
+          description="Add PDFs or text files from device storage."
           icon={FilePlus2}
-          label="Import file"
+          label="Import file(s)"
           onPress={() => {
             setAddSheetVisible(false);
-            void addFiles('picker');
+            void addFiles('files');
           }}
         />
-        <ActionRow
-          icon={Camera}
-          label="Take picture"
-          onPress={() => {
-            setAddSheetVisible(false);
-            void addFiles('camera');
-          }}
-        />
+        <View className="flex-row gap-3">
+          <View className="flex-1">
+            <ActionRow
+              icon={Image}
+              label="Import image(s)"
+              onPress={() => {
+                setAddSheetVisible(false);
+                void addFiles('images');
+              }}
+            />
+          </View>
+          <Pressable
+            accessibilityLabel="Take picture"
+            accessibilityRole="button"
+            className="aspect-square shrink-0 self-stretch items-center justify-center rounded-2xl border border-line bg-paper active:bg-[#EEE4CF]"
+            onPress={() => {
+              setAddSheetVisible(false);
+              void addFiles('camera');
+            }}>
+            <View
+              className="h-11 w-11 items-center justify-center rounded-xl bg-paper-raised"
+              testID="camera-action-icon-background">
+              <Camera color={colors.ink} size={25} strokeWidth={2.1} />
+            </View>
+          </Pressable>
+        </View>
         <ActionRow
           icon={FileText}
           label="Create empty text file"

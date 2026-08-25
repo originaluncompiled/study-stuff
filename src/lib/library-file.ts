@@ -38,6 +38,7 @@ const descriptorsByMimeType: Record<string, LibraryFileDescriptor> = {
 };
 
 export const supportedPickerMimeTypes = Object.keys(descriptorsByMimeType);
+export const supportedFilePickerMimeTypes = ['application/pdf', 'text/plain'];
 
 export function classifyLibraryFile(
   extension?: string | null,

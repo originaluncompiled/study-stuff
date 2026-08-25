@@ -7,7 +7,7 @@ import { isStudyFolderRecord } from '@/lib/folder-record';
 import {
   classifyLibraryFile,
   type LibraryFileDescriptor,
-  supportedPickerMimeTypes,
+  supportedFilePickerMimeTypes,
 } from '@/lib/library-file';
 import { compareLibraryEntries } from '@/lib/library-entry-order';
 import {
@@ -212,7 +212,7 @@ export async function pickAndCopyFiles(
   try {
     const result = await File.pickFileAsync({
       multipleFiles: true,
-      mimeTypes: supportedPickerMimeTypes,
+      mimeTypes: supportedFilePickerMimeTypes,
     });
     if (result.canceled || !result.result) {
       return 0;
@@ -221,6 +221,36 @@ export async function pickAndCopyFiles(
       folderId,
       relativePath,
       result.result.map((file) => ({ file })),
+    );
+  } finally {
+    unlockFolder(folderId);
+  }
+}
+
+export async function pickAndCopyImages(
+  folderId: string,
+  relativePath?: string,
+): Promise<number> {
+  lockFolder(folderId);
+  try {
+    const result = await ImagePicker.launchImageLibraryAsync({
+      allowsMultipleSelection: true,
+      mediaTypes: ['images'],
+      quality: 1,
+      selectionLimit: 0,
+    });
+    if (result.canceled || !result.assets.length) {
+      return 0;
+    }
+
+    return await copyFilesUnlocked(
+      folderId,
+      relativePath,
+      result.assets.map((asset) => ({
+        file: new File(asset.uri),
+        mimeType: asset.mimeType,
+        preferredName: asset.fileName,
+      })),
     );
   } finally {
     unlockFolder(folderId);

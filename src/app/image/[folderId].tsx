@@ -155,7 +155,7 @@ export default function ImageScreen() {
                   alt={item.name}
                   contentFit="contain"
                   source={item.uri}
-                  style={{ height: '100%', width: '100%' }}
+                  style={{ bottom: 8, left: 8, position: 'absolute', right: 8, top: 8 }}
                   onError={() =>
                     setFailedPaths((current) => new Set(current).add(item.relativePath))
                   }

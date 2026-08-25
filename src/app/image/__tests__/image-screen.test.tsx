@@ -130,6 +130,13 @@ describe('ImageScreen', () => {
     expect(view.getByText('Page 10.jpg')).toBeTruthy();
     expect(view.getByText('2 / 2')).toBeTruthy();
     expect(view.getAllByRole('button')).toHaveLength(2);
+    expect(view.getByLabelText('Image 2 of 2, Page 10.jpg')).toHaveStyle({
+      bottom: 8,
+      left: 8,
+      position: 'absolute',
+      right: 8,
+      top: 8,
+    });
 
     await fireEvent.press(view.getByRole('button', { name: 'Show image 1 of 2, Page 2.jpg' }));
     expect(mockGoToIndex).toHaveBeenCalledWith(0);

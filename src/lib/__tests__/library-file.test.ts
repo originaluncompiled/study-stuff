@@ -1,4 +1,8 @@
-import { classifyLibraryFile, supportedPickerMimeTypes } from '@/lib/library-file';
+import {
+  classifyLibraryFile,
+  supportedFilePickerMimeTypes,
+  supportedPickerMimeTypes,
+} from '@/lib/library-file';
 
 describe('library file classification', () => {
   test.each([
@@ -24,5 +28,6 @@ describe('library file classification', () => {
     expect(supportedPickerMimeTypes).toEqual(
       expect.arrayContaining(['application/pdf', 'text/plain', 'image/jpeg', 'image/heic']),
     );
+    expect(supportedFilePickerMimeTypes).toEqual(['application/pdf', 'text/plain']);
   });
 });

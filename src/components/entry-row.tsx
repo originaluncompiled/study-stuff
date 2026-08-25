@@ -20,7 +20,11 @@ export function EntryRow({
   const [pressed, setPressed] = useState(false);
   const [menuPressed, setMenuPressed] = useState(false);
   const isDirectory = entry.kind === 'directory';
-  const Icon = isDirectory ? Folder : entry.kind === 'image' ? ImageIcon : FileText;
+  const Icon = isDirectory
+    ? Folder
+    : entry.kind === 'image'
+      ? ImageIcon
+      : FileText;
   const detail = isDirectory
     ? formatChildCount(entry.childCount)
     : formatFileSize(entry.size, entry.kind as Exclude<LibraryEntry['kind'], 'directory'>);
@@ -42,14 +46,7 @@ export function EntryRow({
         ) : null}
         <View className={`h-12 w-12 items-center justify-center rounded-xl ${isDirectory ? 'bg-purple' : 'bg-ink'}`}>
           {entry.kind === 'pdf' ? (
-            <View className="h-8 w-8 items-center justify-center">
-              <File color={colors.paper} size={30} />
-              <View className="absolute bottom-1 rounded-sm bg-purple px-1">
-                <AppText variant="label" className="text-[7px] leading-[9px] text-white">
-                  PDF
-                </AppText>
-              </View>
-            </View>
+            <File color={colors.paper} size={27} testID="pdf-entry-icon" />
           ) : (
             <Icon color={isDirectory ? colors.paperRaised : colors.paper} size={25} />
           )}

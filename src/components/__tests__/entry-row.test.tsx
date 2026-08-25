@@ -55,6 +55,8 @@ describe('EntryRow', () => {
     });
 
     expect(view.getByText('2 KB')).toBeTruthy();
+    expect(view.getByTestId('pdf-entry-icon')).toBeTruthy();
+    expect(view.queryByText('PDF')).toBeNull();
   });
 
   test.each([
