@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 
 import { AppText } from '@/components/app-text';
-import { colors } from '@/constants/theme';
+import { useThemeColors, useThemeStore } from '@/store/theme-store';
 
 type NameDialogProps = {
   centerInTopHalf?: boolean;
@@ -59,6 +59,8 @@ function NameDialogContent({
   onSubmit,
   title,
 }: Omit<NameDialogProps, 'visible'>) {
+  const colors = useThemeColors();
+  const mode = useThemeStore((state) => state.mode);
   const inputRef = useRef<TextInput>(null);
   const [name, setName] = useState(initialValue ?? '');
   const [error, setError] = useState<string | null>(null);
@@ -108,7 +110,7 @@ function NameDialogContent({
           style={centerInTopHalf ? { height: screenHeight / 2 } : undefined}>
           <View
             accessibilityViewIsModal
-            className="rounded-[28px] border-2 border-ink bg-paper-raised p-5"
+            className="rounded-[28px] border-2 border-strong-line bg-paper-raised p-5"
             importantForAccessibility="yes">
             <AppText accessibilityRole="header" variant="title" className="text-2xl">
               {title}
@@ -117,7 +119,8 @@ function NameDialogContent({
               ref={inputRef}
               accessibilityLabel={inputLabel}
               autoCapitalize="sentences"
-              className="mt-5 rounded-2xl border-2 border-ink bg-paper px-4 py-3 font-sans text-lg text-ink"
+              className="mt-5 rounded-2xl border-2 border-strong-line bg-paper px-4 py-3 font-sans text-lg text-ink"
+              keyboardAppearance={mode}
               maxLength={80}
               onChangeText={setName}
               onSubmitEditing={() => void submit()}
@@ -150,9 +153,9 @@ function NameDialogContent({
                 disabled={submitting}
                 onPress={() => void submit()}>
                 {submitting ? (
-                  <ActivityIndicator color={colors.white} />
+                  <ActivityIndicator color={colors.onPurple} />
                 ) : (
-                  <AppText variant="label" className="text-white">
+                  <AppText variant="label" className="text-on-purple">
                     {confirmLabel ?? 'Create'}
                   </AppText>
                 )}

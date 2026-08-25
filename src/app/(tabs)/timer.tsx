@@ -27,13 +27,13 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import { AppText } from '@/components/app-text';
 import { getMainTabBarHeight } from '@/components/main-tab-bar';
-import { colors } from '@/constants/theme';
 import {
   formatTimer,
   MAX_REST_MINUTES,
   MAX_STUDY_MINUTES,
   TIMER_DURATION_STEP,
 } from '@/lib/timer';
+import { useThemeColors } from '@/store/theme-store';
 import { useTimerStore } from '@/store/timer-store';
 
 const resetButtonSize = 56;
@@ -56,15 +56,16 @@ function DurationCard({
   onChange: (minutes: number) => void;
   purple?: boolean;
 }) {
+  const colors = useThemeColors();
   const decreaseDisabled = disabled || minutes === 0;
   const increaseDisabled = disabled || minutes === maxMinutes;
 
   return (
-    <View className="flex-1 rounded-[22px] border-2 border-ink bg-paper-raised p-3">
+    <View className="flex-1 rounded-[22px] border-2 border-strong-line bg-paper-raised p-3">
       <View className="flex-row items-center gap-2">
         <View
           className={`h-10 w-10 items-center justify-center rounded-xl ${purple ? 'bg-purple' : 'bg-ink'}`}>
-          <Icon color={colors.paperRaised} size={20} strokeWidth={2.3} />
+          <Icon color={purple ? colors.onPurple : colors.paper} size={20} strokeWidth={2.3} />
         </View>
         <AppText className="flex-1" numberOfLines={1} variant="label">
           {label}
@@ -113,6 +114,7 @@ function DurationCard({
 
 export default function TimerScreen() {
   const insets = useSafeAreaInsets();
+  const colors = useThemeColors();
   const { width } = useWindowDimensions();
   const hydrated = useTimerStore((state) => state.hydrated);
   const studyMinutes = useTimerStore((state) => state.studyMinutes);
@@ -229,15 +231,15 @@ export default function TimerScreen() {
           <View className="mt-12 items-center">
             <View style={{ height: dialSize, width: dialSize }}>
               <View
-                className="absolute rounded-full bg-ink"
+                className="absolute rounded-full bg-offset-shadow"
                 style={{
                   height: dialSize,
                   transform: [{ translateX: 6 }, { translateY: 7 }],
                   width: dialSize,
                 }}
               />
-              <View className="flex-1 rounded-full border-2 border-ink bg-purple p-3">
-                <View className="flex-1 items-center justify-center rounded-full border-2 border-ink bg-paper-raised px-4">
+              <View className="flex-1 rounded-full border-2 border-strong-line bg-purple p-3">
+                <View className="flex-1 items-center justify-center rounded-full border-2 border-strong-line bg-paper-raised px-4">
                   {status === 'running' || status === 'paused' ? (
                     <AppText
                       accessibilityLabel={`Current phase, ${phase === 'study' ? 'Studying' : 'Resting'}`}
@@ -305,11 +307,11 @@ export default function TimerScreen() {
               style={resetButtonAnimatedStyle}>
               {status !== 'idle' || resetContentVisible ? (
                 <>
-                  <View className="absolute inset-0 translate-x-1 translate-y-1 rounded-2xl bg-ink" />
+                  <View className="absolute inset-0 translate-x-1 translate-y-1 rounded-2xl bg-offset-shadow" />
                   <Pressable
                     accessibilityLabel="Reset Timer"
                     accessibilityRole="button"
-                    className="h-full w-full items-center justify-center overflow-hidden rounded-2xl border-2 border-ink bg-paper-raised active:bg-paper"
+                    className="h-full w-full items-center justify-center overflow-hidden rounded-2xl border-2 border-strong-line bg-paper-raised active:bg-paper"
                     onPress={resetTimer}>
                     <RotateCcw color={colors.ink} size={20} strokeWidth={2.3} />
                   </Pressable>
@@ -317,23 +319,23 @@ export default function TimerScreen() {
               ) : null}
             </Animated.View>
             <Animated.View className="relative h-16" style={timerButtonAnimatedStyle}>
-              <View className="absolute inset-0 translate-x-1 translate-y-1 rounded-2xl bg-ink" />
+              <View className="absolute inset-0 translate-x-1 translate-y-1 rounded-2xl bg-offset-shadow" />
               <Pressable
                 disabled={startDisabled}
                 accessibilityLabel={buttonLabel}
                 accessibilityRole="button"
                 accessibilityState={{ disabled: startDisabled }}
-                className={`h-16 flex-row items-center justify-center gap-3 rounded-2xl border-2 border-ink bg-purple px-5 active:bg-purple-dark ${
+                className={`h-16 flex-row items-center justify-center gap-3 rounded-2xl border-2 border-strong-line bg-purple px-5 active:bg-purple-dark ${
                   startDisabled ? 'opacity-50' : ''
                 }`}
                 onPress={handleTimerPress}>
                 <TimerButtonIcon
-                  color={colors.paperRaised}
-                  fill={status === 'running' ? 'none' : colors.paperRaised}
+                  color={colors.offWhite}
+                  fill={status === 'running' ? 'none' : colors.offWhite}
                   size={21}
                   strokeWidth={2.2}
                 />
-                <AppText className="text-paper-raised" variant="label">
+                <AppText className="text-off-white" variant="label">
                   {buttonLabel}
                 </AppText>
               </Pressable>

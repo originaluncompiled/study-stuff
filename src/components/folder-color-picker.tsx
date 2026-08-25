@@ -28,7 +28,7 @@ export function FolderColorPicker({ disabled, onSelect, selected }: FolderColorP
             key={option.id}
             onPress={() => onSelect(option.id)}>
             <View
-              className="h-12 w-12 items-center justify-center rounded-full border-2 border-ink"
+              className="h-12 w-12 items-center justify-center rounded-full border-2 border-strong-line"
               style={{ backgroundColor: option.hex }}>
               {isSelected ? <Check color={checkColor} size={25} strokeWidth={3} /> : null}
             </View>

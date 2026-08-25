@@ -21,7 +21,6 @@ import {
   ImmersiveViewerChrome,
   useImmersiveViewerChrome,
 } from '@/components/immersive-viewer-chrome';
-import { colors } from '@/constants/theme';
 import { orderLibraryEntries } from '@/lib/library-entry-order';
 import { normalizeRelativePath, parentRelativePath } from '@/lib/paths';
 import { readFavouritePaths } from '@/services/library-favourites';
@@ -30,6 +29,7 @@ import {
   getLibraryFileKind,
   listDirectory,
 } from '@/services/library-files';
+import { useThemeColors } from '@/store/theme-store';
 
 type GalleryImage = {
   name: string;
@@ -46,6 +46,7 @@ type GalleryResolution = {
 export default function ImageScreen() {
   const params = useLocalSearchParams<'/image/[folderId]'>();
   const router = useRouter();
+  const colors = useThemeColors();
   const rawPath = Array.isArray(params.path) ? params.path[0] : params.path;
   const [resolution, setResolution] = useState<GalleryResolution | null>(null);
   const [headerVisible, setHeaderVisible] = useState(true);
@@ -105,7 +106,7 @@ export default function ImageScreen() {
   }
 
   return (
-    <View className="flex-1 bg-ink">
+    <View className="flex-1 bg-viewer">
       {!resolution ? (
         <View className="flex-1 items-center justify-center">
           <ActivityIndicator color={colors.purple} size="large" />
@@ -115,12 +116,12 @@ export default function ImageScreen() {
       {error ? (
         <View className="flex-1 items-center justify-center px-7">
           <View className="h-20 w-20 items-center justify-center rounded-[26px] bg-purple">
-            <AlertCircle color={colors.paper} size={38} />
+            <AlertCircle color={colors.onPurple} size={38} />
           </View>
-          <AppText variant="title" className="mt-5 text-center text-2xl text-paper">
+          <AppText variant="title" className="mt-5 text-center text-2xl text-viewer-foreground">
             Could not display this image
           </AppText>
-          <AppText variant="caption" className="mt-2 text-center text-line">
+          <AppText variant="caption" className="mt-2 text-center text-viewer-muted">
             {error}
           </AppText>
         </View>
@@ -128,7 +129,7 @@ export default function ImageScreen() {
 
       {images.length > 0 ? (
         <GestureViewer
-          backdropStyle={{ backgroundColor: colors.ink }}
+          backdropStyle={{ backgroundColor: colors.viewer }}
           containerStyle={{ flex: 1 }}
           data={images}
           dismiss={{ enabled: false }}
@@ -139,12 +140,12 @@ export default function ImageScreen() {
           renderItem={(item, index, { isActive }) => (
             <View
               accessibilityElementsHidden={!isActive}
-              className="h-full w-full items-center justify-center bg-ink"
+              className="h-full w-full items-center justify-center bg-viewer"
               importantForAccessibility={isActive ? 'auto' : 'no-hide-descendants'}>
               {failedPaths.has(item.relativePath) ? (
                 <View className="items-center px-8">
                   <AlertCircle color={colors.purple} size={36} />
-                  <AppText variant="label" className="mt-3 text-center text-paper">
+                  <AppText variant="label" className="mt-3 text-center text-viewer-foreground">
                     This image could not be opened.
                   </AppText>
                 </View>
@@ -170,7 +171,7 @@ export default function ImageScreen() {
           accessibilityElementsHidden={!headerVisible}
           importantForAccessibility={headerVisible ? 'auto' : 'no-hide-descendants'}
           pointerEvents={headerVisible ? 'auto' : 'none'}
-          className="absolute bottom-0 left-0 right-0 z-30 bg-ink/95 pt-2"
+          className="absolute bottom-0 left-0 right-0 z-30 bg-viewer/95 pt-2"
           style={[
             { paddingBottom: Math.max(chrome.insets.bottom, 10) },
             footerAnimatedStyle,
@@ -195,7 +196,7 @@ export default function ImageScreen() {
                 adjustImage(action);
               }
             }}>
-            <AppText variant="label" className="text-paper">
+            <AppText variant="label" className="text-viewer-foreground">
               {currentIndex + 1} / {images.length}
             </AppText>
           </View>
@@ -212,7 +213,7 @@ export default function ImageScreen() {
                   accessibilityLabel={`Show image ${index + 1} of ${images.length}, ${item.name}`}
                   accessibilityRole="button"
                   accessibilityState={{ selected }}
-                  className={`h-14 w-14 overflow-hidden rounded-xl border-2 ${selected ? 'border-purple' : 'border-line/60'}`}
+                  className={`h-14 w-14 overflow-hidden rounded-xl border-2 ${selected ? 'border-purple' : 'border-viewer-muted/60'}`}
                   onPress={() => goToIndex(index)}>
                   <Image
                     accessibilityIgnoresInvertColors

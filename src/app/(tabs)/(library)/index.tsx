@@ -17,8 +17,8 @@ import { FolderTile } from '@/components/folder-tile';
 import { ImportOverlay } from '@/components/import-overlay';
 import { getMainTabBarHeight } from '@/components/main-tab-bar';
 import { NameDialog } from '@/components/name-dialog';
-import { colors } from '@/constants/theme';
 import { useLibraryStore } from '@/store/library-store';
+import { useThemeColors } from '@/store/theme-store';
 import type { FolderColor, ImportProgress, StudyFolder } from '@/types/library';
 
 type GridItem = { type: 'add' } | { type: 'folder'; folder: StudyFolder };
@@ -33,6 +33,7 @@ function getGridItemKey(item: GridItem): string {
 export default function LibraryScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const colors = useThemeColors();
   const folders = useLibraryStore((state) => state.folders);
   const hydrationError = useLibraryStore((state) => state.hydrationError);
   const createFolder = useLibraryStore((state) => state.createFolder);

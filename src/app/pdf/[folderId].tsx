@@ -23,10 +23,10 @@ import {
   ImmersiveViewerChrome,
   useImmersiveViewerChrome,
 } from '@/components/immersive-viewer-chrome';
-import { colors } from '@/constants/theme';
 import { normalizeRelativePath } from '@/lib/paths';
 import { getPdfScrubberOffset, getPdfScrubberPage } from '@/lib/pdf-viewer';
 import { getLibraryFile, getLibraryFileKind } from '@/services/library-files';
+import { useThemeColors } from '@/store/theme-store';
 
 const PDF_HEADER_SCROLL_THRESHOLD = 12;
 const PDF_SCRUBBER_HEIGHT = 48;
@@ -37,6 +37,7 @@ const PDF_PAGE_INSET = 8;
 export default function PdfScreen() {
   const params = useLocalSearchParams<'/pdf/[folderId]'>();
   const router = useRouter();
+  const colors = useThemeColors();
   const rawPath = Array.isArray(params.path) ? params.path[0] : params.path;
   const { width, height } = useWindowDimensions();
   const [loading, setLoading] = useState(true);
@@ -296,23 +297,23 @@ export default function PdfScreen() {
     });
 
   return (
-    <View className="flex-1 bg-ink">
+    <View className="flex-1 bg-viewer">
       {error ? (
         <View className="flex-1 items-center justify-center px-7">
           <View className="h-20 w-20 items-center justify-center rounded-[26px] bg-purple">
-            <AlertCircle color={colors.paper} size={38} />
+            <AlertCircle color={colors.onPurple} size={38} />
           </View>
-          <AppText variant="title" className="mt-5 text-center text-2xl text-paper">
+          <AppText variant="title" className="mt-5 text-center text-2xl text-viewer-foreground">
             Could not display this PDF
           </AppText>
-          <AppText variant="caption" className="mt-2 text-center text-line">
+          <AppText variant="caption" className="mt-2 text-center text-viewer-muted">
             {error}
           </AppText>
         </View>
       ) : null}
 
       {!resolution ? (
-        <View className="flex-1 items-center justify-center bg-ink">
+        <View className="flex-1 items-center justify-center bg-viewer">
           <ActivityIndicator color={colors.purple} size="large" />
         </View>
       ) : null}
@@ -360,15 +361,15 @@ export default function PdfScreen() {
               style={{
                 flex: 1,
                 width: '100%',
-                backgroundColor: colors.ink,
+                backgroundColor: colors.viewer,
               }}
               trustAllCerts={false}
             />
           </Animated.View>
           {loading ? (
-            <View className="absolute inset-0 items-center justify-center bg-ink">
+            <View className="absolute inset-0 items-center justify-center bg-viewer">
               <ActivityIndicator color={colors.purple} size="large" />
-              <AppText variant="caption" className="mt-4 text-line">
+              <AppText variant="caption" className="mt-4 text-viewer-muted">
                 Opening PDF…
               </AppText>
             </View>
@@ -416,7 +417,7 @@ export default function PdfScreen() {
                     ]}>
                     <AppText
                       variant="label"
-                      className="text-[15px] text-ink"
+                      className="text-[15px] text-viewer"
                       numberOfLines={1}
                       style={{
                         fontFamily: 'DMSans_700Bold',

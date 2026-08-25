@@ -14,8 +14,8 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppText } from '@/components/app-text';
-import { colors } from '@/constants/theme';
 import { formatTimer } from '@/lib/timer';
+import { useThemeColors } from '@/store/theme-store';
 import { useTimerStore } from '@/store/timer-store';
 
 type TimerRuntimeProps = {
@@ -86,6 +86,7 @@ export function TimerRuntime({ showDialogs = true }: TimerRuntimeProps) {
 function RestTimerDialog() {
   const insets = useSafeAreaInsets();
   const { height, width } = useWindowDimensions();
+  const colors = useThemeColors();
   const status = useTimerStore((state) => state.status);
   const secondsRemaining = useTimerStore((state) => state.secondsRemaining);
   const pause = useTimerStore((state) => state.pause);
@@ -142,7 +143,7 @@ function RestTimerDialog() {
         />
         <View
           accessibilityViewIsModal
-          className={`w-full max-w-lg border-2 border-ink bg-paper-raised ${
+          className={`w-full max-w-lg border-2 border-strong-line bg-paper-raised ${
             isLandscape
               ? 'flex-row items-center gap-5 rounded-[24px] p-4'
               : 'rounded-[30px] p-5'
@@ -162,7 +163,7 @@ function RestTimerDialog() {
               className={`items-center justify-center rounded-[20px] bg-purple ${
                 isLandscape ? 'h-16 w-16' : 'h-20 w-20'
               }`}>
-              <Coffee color={colors.paperRaised} size={isLandscape ? 30 : 38} strokeWidth={2.2} />
+              <Coffee color={colors.onPurple} size={isLandscape ? 30 : 38} strokeWidth={2.2} />
             </View>
             <View className={isLandscape ? 'flex-1' : 'mt-4 items-center'}>
               <AppText accessibilityRole="header" className="text-2xl" variant="title">
@@ -188,22 +189,22 @@ function RestTimerDialog() {
             <Pressable
               accessibilityLabel={paused ? 'Resume Rest Timer' : 'Pause Rest Timer'}
               accessibilityRole="button"
-              className="min-h-14 flex-row items-center justify-center gap-2 rounded-2xl border-2 border-ink bg-purple px-4 active:bg-purple-dark"
+              className="min-h-14 flex-row items-center justify-center gap-2 rounded-2xl border-2 border-strong-line bg-purple px-4 active:bg-purple-dark"
               onPress={() => void pauseOrResume()}>
               <PrimaryIcon
-                color={colors.paperRaised}
-                fill={paused ? colors.paperRaised : 'none'}
+                color={colors.onPurple}
+                fill={paused ? colors.onPurple : 'none'}
                 size={20}
                 strokeWidth={2.2}
               />
-              <AppText className="text-paper-raised" variant="label">
+              <AppText className="text-on-purple" variant="label">
                 {paused ? 'Resume' : 'Pause'}
               </AppText>
             </Pressable>
             <Pressable
               accessibilityLabel="Skip Rest"
               accessibilityRole="button"
-              className="min-h-14 flex-row items-center justify-center gap-2 rounded-2xl border-2 border-ink bg-paper px-4 active:bg-line/40"
+              className="min-h-14 flex-row items-center justify-center gap-2 rounded-2xl border-2 border-strong-line bg-paper px-4 active:bg-line/40"
               onPress={() => void skip()}>
               <SkipForward color={colors.ink} size={20} strokeWidth={2.2} />
               <AppText variant="label">Skip rest</AppText>
@@ -223,6 +224,7 @@ function RestTimerDialog() {
 function SessionCompleteDialog() {
   const insets = useSafeAreaInsets();
   const { height, width } = useWindowDimensions();
+  const colors = useThemeColors();
   const titleRef = useRef<View>(null);
   const studyMinutes = useTimerStore((state) => state.studyMinutes);
   const restMinutes = useTimerStore((state) => state.restMinutes);
@@ -274,7 +276,7 @@ function SessionCompleteDialog() {
         }}>
         <View
           accessibilityViewIsModal
-          className={`w-full max-w-lg border-2 border-ink bg-paper-raised ${
+          className={`w-full max-w-lg border-2 border-strong-line bg-paper-raised ${
             isLandscape
               ? 'flex-row items-center gap-5 rounded-[24px] p-4'
               : 'rounded-[30px] p-5'
@@ -287,7 +289,7 @@ function SessionCompleteDialog() {
                 isLandscape ? 'h-16 w-16' : 'h-20 w-20'
               }`}>
               <BookOpen
-                color={colors.paperRaised}
+                color={colors.onPurple}
                 size={isLandscape ? 30 : 38}
                 strokeWidth={2.2}
               />
@@ -309,17 +311,17 @@ function SessionCompleteDialog() {
             <Pressable
               accessibilityLabel="Continue Studying"
               accessibilityRole="button"
-              className="min-h-14 flex-row items-center justify-center gap-2 rounded-2xl border-2 border-ink bg-purple px-4 active:bg-purple-dark"
+              className="min-h-14 flex-row items-center justify-center gap-2 rounded-2xl border-2 border-strong-line bg-purple px-4 active:bg-purple-dark"
               onPress={() => void continueSession()}>
-              <Play color={colors.paperRaised} fill={colors.paperRaised} size={20} strokeWidth={2.2} />
-              <AppText className="text-paper-raised" variant="label">
+              <Play color={colors.onPurple} fill={colors.onPurple} size={20} strokeWidth={2.2} />
+              <AppText className="text-on-purple" variant="label">
                 Continue
               </AppText>
             </Pressable>
             <Pressable
               accessibilityLabel="Stop Session"
               accessibilityRole="button"
-              className="min-h-14 flex-row items-center justify-center gap-2 rounded-2xl border-2 border-ink bg-paper px-4 active:bg-line/40"
+              className="min-h-14 flex-row items-center justify-center gap-2 rounded-2xl border-2 border-strong-line bg-paper px-4 active:bg-line/40"
               onPress={() => void stopSession()}>
               <Square color={colors.ink} size={19} strokeWidth={2.2} />
               <AppText variant="label">Stop session</AppText>

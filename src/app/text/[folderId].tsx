@@ -21,10 +21,10 @@ import {
   ImmersiveViewerChrome,
   useImmersiveViewerChrome,
 } from '@/components/immersive-viewer-chrome';
-import { colors } from '@/constants/theme';
 import { normalizeRelativePath } from '@/lib/paths';
 import { readTextFile, writeTextFile } from '@/services/library-files';
 import { useLibraryStore } from '@/store/library-store';
+import { useThemeColors, useThemeStore } from '@/store/theme-store';
 
 const HEADER_SCROLL_THRESHOLD = 12;
 
@@ -32,6 +32,8 @@ export default function TextScreen() {
   const params = useLocalSearchParams<'/text/[folderId]'>();
   const router = useRouter();
   const navigation = useNavigation();
+  const colors = useThemeColors();
+  const themeMode = useThemeStore((state) => state.mode);
   const touchFolder = useLibraryStore((state) => state.touchFolder);
   const rawPath = Array.isArray(params.path) ? params.path[0] : params.path;
   const rawEdit = Array.isArray(params.edit) ? params.edit[0] : params.edit;
@@ -187,7 +189,7 @@ export default function TextScreen() {
       ) : error ? (
         <View className="flex-1 items-center justify-center px-7">
           <View className="h-20 w-20 items-center justify-center rounded-[26px] bg-purple">
-            <AlertCircle color={colors.paper} size={38} />
+            <AlertCircle color={colors.onPurple} size={38} />
           </View>
           <AppText variant="title" className="mt-5 text-center text-2xl">
             Could not display this text file
@@ -205,6 +207,7 @@ export default function TextScreen() {
             className="flex-1 px-5 text-base text-ink"
             disableFullscreenUI
             multiline
+            keyboardAppearance={themeMode}
             selectionColor={colors.purple}
             style={{
               fontFamily: 'DMSans_400Regular',

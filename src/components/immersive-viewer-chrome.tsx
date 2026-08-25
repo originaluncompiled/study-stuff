@@ -14,8 +14,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppText } from '@/components/app-text';
 import { TimerManagerSheet } from '@/components/timer-manager-sheet';
-import { colors } from '@/constants/theme';
 import { formatTimer } from '@/lib/timer';
+import { useThemeColors, useThemeStore } from '@/store/theme-store';
 import { useTimerStore } from '@/store/timer-store';
 
 const HEADER_CONTENT_HEIGHT = 44;
@@ -88,6 +88,8 @@ export function ImmersiveViewerChrome({
   title: string;
   tone?: 'dark' | 'paper';
 }) {
+  const colors = useThemeColors();
+  const themeMode = useThemeStore((state) => state.mode);
   const [timerManagerSession, setTimerManagerSession] = useState<string | null>(null);
   const timerHydrated = useTimerStore((state) => state.hydrated);
   const timerStatus = useTimerStore((state) => state.status);
@@ -105,7 +107,7 @@ export function ImmersiveViewerChrome({
         : null;
   const timerManagerVisible = timerSession !== null && timerManagerSession === timerSession;
   const dark = tone === 'dark';
-  const foreground = dark ? colors.paper : colors.ink;
+  const foreground = dark ? colors.viewerForeground : colors.ink;
 
   return (
     <>
@@ -113,7 +115,7 @@ export function ImmersiveViewerChrome({
         animated
         hidden={!headerVisible}
         hideTransitionAnimation="fade"
-        style={dark ? 'light' : 'dark'}
+        style={dark || themeMode === 'dark' ? 'light' : 'dark'}
       />
       <Stack.Screen options={{ headerShown: false }} />
       <Animated.View
@@ -121,7 +123,7 @@ export function ImmersiveViewerChrome({
         importantForAccessibility={headerVisible ? 'auto' : 'no-hide-descendants'}
         pointerEvents={headerVisible ? 'auto' : 'none'}
         testID={`${testIDPrefix}-header`}
-        className={`absolute left-0 right-0 top-0 z-30 px-2 ${dark ? 'bg-ink' : 'bg-paper'}`}
+        className={`absolute left-0 right-0 top-0 z-30 px-2 ${dark ? 'bg-viewer' : 'bg-paper'}`}
         style={[
           { height: chrome.headerHeight, paddingTop: chrome.headerTopInset },
           chrome.headerAnimatedStyle,
@@ -139,7 +141,7 @@ export function ImmersiveViewerChrome({
             ellipsizeMode="middle"
             numberOfLines={1}
             variant="label"
-            className={`flex-1 text-center ${dark ? 'text-paper' : 'text-ink'}`}>
+            className={`flex-1 text-center ${dark ? 'text-viewer-foreground' : 'text-ink'}`}>
             {title}
           </AppText>
           <View className="h-11 w-12 items-center justify-center">{rightAction}</View>
@@ -157,15 +159,15 @@ export function ImmersiveViewerChrome({
             chrome.headerAnimatedStyle,
           ]}>
           <View className="relative h-11 min-w-28">
-            <View className="absolute inset-0 translate-x-1 translate-y-1 rounded-full bg-ink" />
+            <View className="absolute inset-0 translate-x-1 translate-y-1 rounded-full bg-offset-shadow" />
             <Pressable
               accessibilityLabel={`${timerPhase === 'study' ? 'Study' : 'Rest'} timer${timerStatus === 'paused' ? ' paused' : ''}, ${formatTimer(timerSecondsRemaining)} remaining. Open timer controls.`}
               accessibilityRole="button"
               accessibilityState={{ expanded: timerManagerVisible }}
-              className="h-11 min-w-28 flex-row items-center justify-center gap-2 rounded-full border-2 border-ink bg-purple px-4 active:bg-purple-dark"
+              className="h-11 min-w-28 flex-row items-center justify-center gap-2 rounded-full border-2 border-strong-line bg-purple px-4 active:bg-purple-dark"
               onPress={() => setTimerManagerSession(timerSession)}>
               <TimerPillIcon
-                color={colors.white}
+                color={colors.onPurple}
                 size={16}
                 strokeWidth={2.4}
                 testID={
@@ -176,7 +178,7 @@ export function ImmersiveViewerChrome({
                       : `${testIDPrefix}-timer-running-icon`
                 }
               />
-              <AppText className="text-white" variant="label">
+              <AppText className="text-on-purple" variant="label">
                 {formatTimer(timerSecondsRemaining)}
               </AppText>
             </Pressable>

@@ -4,7 +4,7 @@ import Animated, { FadeIn, LinearTransition } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppText } from '@/components/app-text';
-import { colors } from '@/constants/theme';
+import { useThemeColors } from '@/store/theme-store';
 import { useTimerStore } from '@/store/timer-store';
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
@@ -34,6 +34,7 @@ export function MainTabBar({
   onPress: (route: MainTabRoute) => void;
 }) {
   const insets = useSafeAreaInsets();
+  const colors = useThemeColors();
   const timerRunning = useTimerStore((state) => state.status === 'running');
 
   return (
@@ -48,13 +49,13 @@ export function MainTabBar({
             route === 'timer' ? (
               <View className="relative h-[22px] w-[22px]" testID="timer-tab-icon-container">
                 <Icon
-                  color={selected ? colors.purple : colors.ink}
+                  color={selected ? colors.purple : colors.fixedInk}
                   size={22}
                   strokeWidth={2.4}
                 />
                 {timerRunning ? (
                   <View
-                    className="absolute h-3 w-3 rounded-full border-2 border-ink bg-purple"
+                    className="absolute h-3 w-3 rounded-full border-2 border-contrast-line bg-purple"
                     pointerEvents="none"
                     style={{ left: 5, top: -10.5 }}
                     testID="timer-tab-active-indicator"
@@ -63,7 +64,7 @@ export function MainTabBar({
               </View>
             ) : (
               <Icon
-                color={selected ? colors.purple : colors.ink}
+                color={selected ? colors.purple : colors.fixedInk}
                 size={22}
                 strokeWidth={2.4}
               />
@@ -78,15 +79,15 @@ export function MainTabBar({
               accessibilityValue={
                 route === 'timer' && timerRunning ? { text: 'Timer running' } : undefined
               }
-              className={`min-h-14 flex-row items-center justify-center overflow-hidden rounded-full border-2 border-ink px-[15px] active:opacity-90 ${
-                selected ? 'bg-ink' : 'w-14 bg-paper-raised'
+              className={`min-h-14 flex-row items-center justify-center overflow-hidden rounded-full border-2 border-contrast-line px-[15px] active:opacity-90 ${
+                selected ? 'bg-ink' : 'w-14 bg-nav-surface'
               }`}
               layout={tabTransition}
               onPress={() => onPress(route)}>
               <View
                 className="absolute inset-0"
                 pointerEvents="none"
-                style={{ backgroundColor: selected ? colors.ink : colors.paperRaised }}
+                style={{ backgroundColor: selected ? colors.ink : colors.navSurface }}
                 testID={`${label.toLowerCase()}-tab-background`}
               />
               {icon}

@@ -1,16 +1,19 @@
 import '../global.css';
 
 import { useFonts } from 'expo-font';
-import { DefaultTheme, Stack, ThemeProvider } from 'expo-router';
+import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
+import { View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { vars } from 'nativewind';
 import { featureFlags } from 'react-native-screens';
 
 import { TimerRuntime } from '@/components/timer-runtime';
-import { colors } from '@/constants/theme';
+import { getThemeVariables } from '@/constants/theme';
 import { useLibraryStore } from '@/store/library-store';
+import { useThemeColors, useThemeStore } from '@/store/theme-store';
 import { useTimerStore } from '@/store/timer-store';
 
 // Work around stale Android Fabric hit targets after orientation changes.
@@ -19,23 +22,15 @@ featureFlags.experiment.androidResetScreenShadowStateOnOrientationChangeEnabled 
 
 SplashScreen.preventAutoHideAsync().catch(() => undefined);
 
-const navigationTheme = {
-  ...DefaultTheme,
-  colors: {
-    ...DefaultTheme.colors,
-    background: colors.paper,
-    card: colors.paper,
-    text: colors.ink,
-    border: colors.line,
-    primary: colors.purple,
-  },
-};
-
 export const unstable_settings = {
   initialRouteName: '(tabs)',
 };
 
 export default function RootLayout() {
+  const themeMode = useThemeStore((state) => state.mode);
+  const themeHydrated = useThemeStore((state) => state.hydrated);
+  const hydrateTheme = useThemeStore((state) => state.hydrate);
+  const colors = useThemeColors();
   const libraryHydrated = useLibraryStore((state) => state.hydrated);
   const hydrateLibrary = useLibraryStore((state) => state.hydrate);
   const timerHydrated = useTimerStore((state) => state.hydrated);
@@ -49,54 +44,70 @@ export default function RootLayout() {
   });
 
   useEffect(() => {
+    void hydrateTheme();
     void hydrateLibrary();
     void hydrateTimer();
-  }, [hydrateLibrary, hydrateTimer]);
+  }, [hydrateLibrary, hydrateTheme, hydrateTimer]);
 
   useEffect(() => {
-    if ((fontsLoaded || fontError) && libraryHydrated && timerHydrated) {
+    if ((fontsLoaded || fontError) && libraryHydrated && themeHydrated && timerHydrated) {
       SplashScreen.hideAsync().catch(() => undefined);
     }
-  }, [fontError, fontsLoaded, libraryHydrated, timerHydrated]);
+  }, [fontError, fontsLoaded, libraryHydrated, themeHydrated, timerHydrated]);
 
-  if ((!fontsLoaded && !fontError) || !libraryHydrated || !timerHydrated) {
+  if ((!fontsLoaded && !fontError) || !libraryHydrated || !themeHydrated || !timerHydrated) {
     return null;
   }
 
+  const baseNavigationTheme = themeMode === 'dark' ? DarkTheme : DefaultTheme;
+  const navigationTheme = {
+    ...baseNavigationTheme,
+    colors: {
+      ...baseNavigationTheme.colors,
+      background: colors.paper,
+      card: colors.paper,
+      text: colors.ink,
+      border: colors.line,
+      primary: colors.purple,
+    },
+  };
+
   return (
     <GestureHandlerRootView style={{ flex: 1, backgroundColor: colors.paper }}>
-      <ThemeProvider value={navigationTheme}>
-        <StatusBar hidden={false} style="dark" />
-        <Stack
-          screenOptions={{
-            contentStyle: { backgroundColor: colors.paper },
-            headerStyle: { backgroundColor: colors.paper },
-            headerTintColor: colors.ink,
-            headerShadowVisible: false,
-            headerTitleStyle: { fontFamily: 'DMSans_600SemiBold' },
-          }}>
-          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-          <Stack.Screen
-            name="pdf/[folderId]"
-            options={{
-              headerShown: false,
-              headerStyle: { backgroundColor: colors.ink },
-              headerTintColor: colors.paper,
-              contentStyle: { backgroundColor: colors.ink },
+      <View className="flex-1" style={vars(getThemeVariables(themeMode))}>
+        <ThemeProvider value={navigationTheme}>
+          <StatusBar hidden={false} style={themeMode === 'dark' ? 'light' : 'dark'} />
+          <Stack
+            screenOptions={{
+              contentStyle: { backgroundColor: colors.paper },
+              headerStyle: { backgroundColor: colors.paper },
+              headerTintColor: colors.ink,
+              headerShadowVisible: false,
               headerTitleStyle: { fontFamily: 'DMSans_600SemiBold' },
-            }}
-          />
-          <Stack.Screen
-            name="image/[folderId]"
-            options={{
-              headerShown: false,
-              contentStyle: { backgroundColor: colors.ink },
-            }}
-          />
-          <Stack.Screen name="text/[folderId]" options={{ headerShown: false }} />
-        </Stack>
-        <TimerRuntime />
-      </ThemeProvider>
+            }}>
+            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+            <Stack.Screen
+              name="pdf/[folderId]"
+              options={{
+                headerShown: false,
+                headerStyle: { backgroundColor: colors.viewer },
+                headerTintColor: colors.viewerForeground,
+                contentStyle: { backgroundColor: colors.viewer },
+                headerTitleStyle: { fontFamily: 'DMSans_600SemiBold' },
+              }}
+            />
+            <Stack.Screen
+              name="image/[folderId]"
+              options={{
+                headerShown: false,
+                contentStyle: { backgroundColor: colors.viewer },
+              }}
+            />
+            <Stack.Screen name="text/[folderId]" options={{ headerShown: false }} />
+          </Stack>
+          <TimerRuntime />
+        </ThemeProvider>
+      </View>
     </GestureHandlerRootView>
   );
 }

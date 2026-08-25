@@ -1,16 +1,18 @@
 import { ActivityIndicator, Modal, View } from 'react-native';
 
 import { AppText } from '@/components/app-text';
-import { colors } from '@/constants/theme';
+import { useThemeColors } from '@/store/theme-store';
 import type { ImportProgress } from '@/types/library';
 
 export function ImportOverlay({ progress, visible }: { progress: ImportProgress; visible: boolean }) {
+  const colors = useThemeColors();
+
   return (
     <Modal animationType="fade" transparent visible={visible} onRequestClose={() => undefined}>
       <View className="flex-1 items-center justify-center bg-black/45 px-6">
         <View
           accessibilityViewIsModal
-          className="w-full max-w-sm items-center rounded-[28px] border-2 border-ink bg-paper-raised px-6 py-7"
+          className="w-full max-w-sm items-center rounded-[28px] border-2 border-strong-line bg-paper-raised px-6 py-7"
           importantForAccessibility="yes">
           <ActivityIndicator color={colors.purple} size="large" />
           <AppText variant="title" className="mt-5 text-2xl">

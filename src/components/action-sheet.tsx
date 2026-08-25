@@ -22,12 +22,12 @@ import Animated, {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppText } from '@/components/app-text';
-import { colors } from '@/constants/theme';
 import {
   ACTION_SHEET_MAX_UPWARD_OFFSET,
   getActionSheetDragOffset,
   shouldDismissActionSheet,
 } from '@/lib/action-sheet-motion';
+import { useThemeColors } from '@/store/theme-store';
 
 type ActionSheetProps = {
   children: ReactNode;
@@ -177,7 +177,7 @@ export function ActionSheet({ children, description, onDismiss, title, visible }
         />
         <Animated.View
           accessibilityViewIsModal
-          className="rounded-t-[32px] border-2 border-b-0 border-ink bg-paper-raised px-5 pt-1"
+          className="rounded-t-[32px] border-2 border-b-0 border-strong-line bg-paper-raised px-5 pt-1"
           importantForAccessibility="yes"
           style={[
             {
@@ -246,11 +246,12 @@ export function ActionRow({
   label,
   onPress,
 }: ActionRowProps) {
+  const colors = useThemeColors();
   const color = destructive ? colors.danger : colors.ink;
   return (
     <Pressable
       accessibilityRole="button"
-      className="flex-row items-center rounded-2xl border border-line bg-paper px-4 py-4 active:bg-[#EEE4CF]"
+      className="flex-row items-center rounded-2xl border border-line bg-paper px-4 py-4 active:bg-surface-pressed"
       onPress={onPress}>
       <View className="mr-4 h-11 w-11 items-center justify-center rounded-xl bg-paper-raised">
         <Icon

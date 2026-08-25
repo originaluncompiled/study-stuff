@@ -108,7 +108,7 @@ describe('main tab navigation', () => {
     expect(view.getByRole('tab', { name: 'Library' }).props.className).not.toContain('w-14');
     expect(view.getByRole('tab', { name: 'Library' }).props.className).toContain('bg-ink');
     expect(view.getByRole('tab', { name: 'Timer' }).props.className).toContain('w-14');
-    expect(view.getByRole('tab', { name: 'Timer' }).props.className).toContain('bg-paper-raised');
+    expect(view.getByRole('tab', { name: 'Timer' }).props.className).toContain('bg-nav-surface');
     expect(view.getByRole('tab', { name: 'Settings' }).props.className).toContain('w-14');
     expect(view.getByTestId('library-tab-label').props.className).toBe('px-2');
     expect(view.queryByTestId('timer-tab-label')).toBeNull();
@@ -159,7 +159,7 @@ describe('main tab navigation', () => {
     });
     expect(view.getByTestId('timer-tab-active-indicator')).toHaveStyle({ left: 5, top: -10.5 });
     expect(view.getByTestId('timer-tab-active-indicator').props.className).toContain(
-      'border-2 border-ink bg-purple',
+      'border-2 border-contrast-line bg-purple',
     );
     expect(view.getByRole('tab', { name: 'Timer' }).props.className).toContain(
       'overflow-hidden',

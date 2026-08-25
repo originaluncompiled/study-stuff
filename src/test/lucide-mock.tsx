@@ -23,6 +23,7 @@ export const LibraryBig = MockIcon;
 export const Minus = MockIcon;
 export const MoreHorizontal = MockIcon;
 export const MoreVertical = MockIcon;
+export const Moon = MockIcon;
 export const Palette = MockIcon;
 export const Pause = MockIcon;
 export const Pencil = MockIcon;

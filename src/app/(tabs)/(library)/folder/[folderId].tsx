@@ -21,7 +21,6 @@ import { AppText } from '@/components/app-text';
 import { EntryRow } from '@/components/entry-row';
 import { getMainTabBarHeight } from '@/components/main-tab-bar';
 import { NameDialog } from '@/components/name-dialog';
-import { colors } from '@/constants/theme';
 import { orderLibraryEntries } from '@/lib/library-entry-order';
 import { joinRelativePath, normalizeRelativePath, parentRelativePath } from '@/lib/paths';
 import {
@@ -41,11 +40,13 @@ import {
   takeAndCopyPhoto,
 } from '@/services/library-files';
 import { useLibraryStore } from '@/store/library-store';
+import { useThemeColors } from '@/store/theme-store';
 import type { LibraryEntry } from '@/types/library';
 
 export default function FolderScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const colors = useThemeColors();
   const params = useLocalSearchParams<'/(tabs)/(library)/folder/[folderId]'>();
   const folderId = params.folderId;
   const rawPath = Array.isArray(params.path) ? params.path[0] : params.path;
@@ -332,7 +333,7 @@ export default function FolderScreen() {
             ListEmptyComponent={
               <View className="flex-1 items-center justify-center px-7 pb-16">
                 <View className="h-20 w-20 items-center justify-center rounded-[26px] bg-purple">
-                  <FolderPlus color={colors.paperRaised} size={36} />
+                  <FolderPlus color={colors.onPurple} size={36} />
                 </View>
                 <AppText variant="title" className="mt-5 text-center text-2xl">
                   Nothing here yet
@@ -381,7 +382,7 @@ export default function FolderScreen() {
           <Pressable
             accessibilityLabel="Take picture"
             accessibilityRole="button"
-            className="aspect-square shrink-0 self-stretch items-center justify-center rounded-2xl border border-line bg-paper active:bg-[#EEE4CF]"
+            className="aspect-square shrink-0 self-stretch items-center justify-center rounded-2xl border border-line bg-paper active:bg-surface-pressed"
             onPress={() => {
               setAddSheetVisible(false);
               void addFiles('camera');

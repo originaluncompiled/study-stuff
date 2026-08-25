@@ -7,7 +7,7 @@
     "orientation": "default",
     "icon": "./assets/images/icon.png",
     "scheme": "studystuff",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "automatic",
     "ios": {
       "icon": "./assets/images/icon.png"
     },

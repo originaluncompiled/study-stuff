@@ -1,12 +1,14 @@
 import { Stack } from 'expo-router';
 
-import { colors } from '@/constants/theme';
+import { useThemeColors } from '@/store/theme-store';
 
 export const unstable_settings = {
   initialRouteName: 'index',
 };
 
 export default function LibraryStackLayout() {
+  const colors = useThemeColors();
+
   return (
     <Stack
       screenOptions={{

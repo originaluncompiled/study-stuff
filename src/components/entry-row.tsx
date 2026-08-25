@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { Pressable, View } from 'react-native';
 
 import { AppText } from '@/components/app-text';
-import { colors } from '@/constants/theme';
+import { useThemeColors } from '@/store/theme-store';
 import type { LibraryEntry } from '@/types/library';
 
 export function EntryRow({
@@ -17,6 +17,7 @@ export function EntryRow({
   onMenu: () => void;
   onPress: () => void;
 }) {
+  const colors = useThemeColors();
   const [pressed, setPressed] = useState(false);
   const [menuPressed, setMenuPressed] = useState(false);
   const isDirectory = entry.kind === 'directory';
@@ -30,8 +31,8 @@ export function EntryRow({
     : formatFileSize(entry.size, entry.kind as Exclude<LibraryEntry['kind'], 'directory'>);
   return (
     <View
-      className="mb-3 flex-row items-stretch overflow-hidden rounded-[22px] border-2 border-ink"
-      style={{ backgroundColor: pressed ? '#EEE4CF' : colors.paperRaised }}>
+      className="mb-3 flex-row items-stretch overflow-hidden rounded-[22px] border-2 border-strong-line"
+      style={{ backgroundColor: pressed ? colors.surfacePressed : colors.paperRaised }}>
       <Pressable
         accessibilityLabel={`Open ${entry.name}${favourite ? ', Favourited' : ''}${isDirectory && entry.childCount !== null ? `, ${detail}` : ''}`}
         accessibilityRole="button"
@@ -58,13 +59,13 @@ export function EntryRow({
                   minimumFontScale={0.75}
                   numberOfLines={1}
                   variant="label"
-                  className="w-full text-center text-[10px] leading-3 text-paper-raised">
+                  className="w-full text-center text-[10px] leading-3 text-on-purple">
                   PDF
                 </AppText>
               </View>
             </View>
           ) : (
-            <Icon color={isDirectory ? colors.paperRaised : colors.paper} size={25} />
+            <Icon color={isDirectory ? colors.onPurple : colors.paper} size={25} />
           )}
         </View>
         <View className="ml-4 flex-1">
@@ -86,7 +87,7 @@ export function EntryRow({
           onPressOut={() => setMenuPressed(false)}
           style={{
             alignItems: 'center',
-            backgroundColor: menuPressed ? '#EEE4CF' : 'transparent',
+            backgroundColor: menuPressed ? colors.surfacePressed : 'transparent',
             borderRadius: 22,
             height: 44,
             justifyContent: 'center',
