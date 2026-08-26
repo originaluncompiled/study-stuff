@@ -115,10 +115,13 @@ describe('TimerScreen', () => {
     await view.unmount();
   });
 
-  test('matches the colored action border to its shadow without changing the reset border', async () => {
+  test('uses matching clock borders and keeps the action borders consistent', async () => {
     const view = await renderTimer();
 
     expect(view.getByTestId('study-clock-ring').props.className).toContain(
+      'border-contrast-line',
+    );
+    expect(view.getByTestId('study-clock-face').props.className).toContain(
       'border-contrast-line',
     );
     expect(view.getByRole('button', { name: 'Start Timer' }).props.className).toContain(

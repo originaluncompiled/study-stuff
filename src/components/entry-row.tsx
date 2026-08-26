@@ -8,7 +8,7 @@ import {
   Star,
 } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
-import { Pressable, View } from 'react-native';
+import { Platform, Pressable, View } from 'react-native';
 import Animated, {
   interpolateColor,
   ReduceMotion,
@@ -197,8 +197,8 @@ export function EntryRow({
           android_ripple={iconButtonRipple}
           hitSlop={6}
           onPress={onMenu}
-          onPressIn={() => setMenuPressed(true)}
-          onPressOut={() => setMenuPressed(false)}
+          onPressIn={() => Platform.OS !== 'android' && setMenuPressed(true)}
+          onPressOut={() => Platform.OS !== 'android' && setMenuPressed(false)}
           style={{
             alignItems: 'center',
             backgroundColor: menuPressed ? colors.surfacePressed : 'transparent',

@@ -78,7 +78,7 @@ export function FolderTile(props: FolderTileProps) {
             accessibilityLabel={`Manage ${name}`}
             accessibilityRole="button"
             android_ripple={iconButtonRipple}
-            className="absolute right-2 top-2 h-10 w-10 items-center justify-center rounded-full bg-paper-raised/90 active:bg-paper"
+            className="absolute right-2 top-2 h-10 w-10 items-center justify-center rounded-full bg-paper-raised/90 ios:active:bg-paper web:active:bg-paper"
             hitSlop={8}
             onPress={props.onMenu}>
             <MoreHorizontal color={themeColors.ink} size={23} />

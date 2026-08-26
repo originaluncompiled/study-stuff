@@ -1,6 +1,8 @@
 import { fireEvent, render } from '@testing-library/react-native';
+import { Platform } from 'react-native';
 
 import { EntryRow } from '@/components/entry-row';
+import { iconButtonRipple } from '@/constants/press-feedback';
 import type { LibraryEntry } from '@/types/library';
 
 function renderEntry(entry: LibraryEntry, favourite = false) {
@@ -96,6 +98,35 @@ describe('EntryRow', () => {
     const view = await renderEntry(entry, true);
 
     expect(view.getByRole('button', { name: 'Open Notes.pdf, Favourited' })).toBeTruthy();
+  });
+
+  test('uses a visible color for Android icon-button ripples', () => {
+    expect(iconButtonRipple.color).toEqual(expect.any(String));
+  });
+
+  test('uses only native ripple feedback for the Android menu button', async () => {
+    const platformDescriptor = Object.getOwnPropertyDescriptor(Platform, 'OS');
+    Object.defineProperty(Platform, 'OS', { configurable: true, value: 'android' });
+
+    try {
+      const view = await renderEntry({
+        childCount: null,
+        kind: 'pdf',
+        name: 'Notes.pdf',
+        relativePath: 'Notes.pdf',
+        size: 2048,
+      });
+      const menuButton = view.getByRole('button', { name: 'Manage Notes.pdf' });
+
+      await fireEvent(menuButton, 'pressIn');
+      expect(view.getByRole('button', { name: 'Manage Notes.pdf' })).toHaveStyle({
+        backgroundColor: 'transparent',
+      });
+    } finally {
+      if (platformDescriptor) {
+        Object.defineProperty(Platform, 'OS', platformDescriptor);
+      }
+    }
   });
 
   test('enters selection from a long press and replaces row actions with a checkbox', async () => {

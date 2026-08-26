@@ -164,7 +164,7 @@ export default function TextScreen() {
       accessibilityRole="button"
       accessibilityState={{ busy: saving, disabled: saving }}
       android_ripple={iconButtonRipple}
-      className="h-11 w-12 items-center justify-center rounded-full active:bg-line/50"
+      className="h-11 w-12 items-center justify-center rounded-full ios:active:bg-line/50 web:active:bg-line/50"
       disabled={saving}
       onPress={() => void save()}>
       {saving ? <ActivityIndicator color={colors.purple} size="small" /> : <Check color={colors.ink} size={24} />}
@@ -174,7 +174,7 @@ export default function TextScreen() {
       accessibilityLabel="Edit text file"
       accessibilityRole="button"
       android_ripple={iconButtonRipple}
-      className="h-11 w-12 items-center justify-center rounded-full active:bg-line/50"
+      className="h-11 w-12 items-center justify-center rounded-full ios:active:bg-line/50 web:active:bg-line/50"
       onPress={() => {
         setEditing(true);
         setHeaderVisible(true);

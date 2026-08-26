@@ -452,7 +452,7 @@ export default function FolderScreen() {
                   : { busy: addingFiles, disabled: addingFiles }
               }
               android_ripple={iconButtonRipple}
-              className="h-11 w-11 items-center justify-center rounded-full active:bg-line/50"
+              className="h-11 w-11 items-center justify-center rounded-full ios:active:bg-line/50 web:active:bg-line/50"
               disabled={!selectionMode && addingFiles}
               hitSlop={8}
               onPress={() =>

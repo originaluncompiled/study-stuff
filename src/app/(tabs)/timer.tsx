@@ -241,7 +241,9 @@ export default function TimerScreen() {
               <View
                 className="flex-1 rounded-full border-2 border-contrast-line bg-purple p-3"
                 testID="study-clock-ring">
-                <View className="flex-1 items-center justify-center rounded-full border-2 border-strong-line bg-paper-raised px-4">
+                <View
+                  className="flex-1 items-center justify-center rounded-full border-2 border-contrast-line bg-paper-raised px-4"
+                  testID="study-clock-face">
                   {status === 'running' || status === 'paused' ? (
                     <AppText
                       accessibilityLabel={`Current phase, ${phase === 'study' ? 'Studying' : 'Resting'}`}

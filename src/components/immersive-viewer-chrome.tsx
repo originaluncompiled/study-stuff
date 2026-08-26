@@ -136,7 +136,7 @@ export function ImmersiveViewerChrome({
             accessibilityLabel="Go back"
             accessibilityRole="button"
             android_ripple={iconButtonRipple}
-            className={`h-11 w-12 items-center justify-center rounded-full ${dark ? 'active:bg-white/10' : 'active:bg-line/50'}`}
+            className={`h-11 w-12 items-center justify-center rounded-full ${dark ? 'ios:active:bg-white/10 web:active:bg-white/10' : 'ios:active:bg-line/50 web:active:bg-line/50'}`}
             onPress={onBack}>
             <ChevronLeft color={foreground} size={30} strokeWidth={2.2} />
           </Pressable>
