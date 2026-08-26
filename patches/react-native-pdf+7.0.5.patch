@@ -105,10 +105,20 @@ index 03c60d5..4a49e78 100644
      public void setPassword(PdfView pdfView, String password) {
          pdfView.setPassword(password);
 diff --git a/node_modules/react-native-pdf/android/src/main/java/org/wonday/pdf/PdfView.java b/node_modules/react-native-pdf/android/src/main/java/org/wonday/pdf/PdfView.java
-index c3d3245..186e792 100644
+index c3d3245..8cc773a 100644
 --- a/node_modules/react-native-pdf/android/src/main/java/org/wonday/pdf/PdfView.java
 +++ b/node_modules/react-native-pdf/android/src/main/java/org/wonday/pdf/PdfView.java
-@@ -72,6 +72,10 @@ public class PdfView extends PDFView implements OnPageChangeListener,OnLoadCompl
+@@ -65,13 +65,20 @@ import com.google.gson.Gson;
+ import org.wonday.pdf.events.TopChangeEvent;
+ 
+ public class PdfView extends PDFView implements OnPageChangeListener,OnLoadCompleteListener,OnErrorListener,OnTapListener,OnDrawListener,OnPageScrollListener, LinkHandler {
++    private static final float DOCUMENT_EDGE_EPSILON = 0.0001f;
+     private int page = 1;               // start from 1
++    private int lastDispatchedPage = 0;
++    private int lastDispatchedPageCount = 0;
+     private boolean horizontal = false;
+     private float scale = 1;
+     private float minScale = 1;
      private float maxScale = 3;
      private String path;
      private int spacing = 10;
@@ -119,7 +129,43 @@ index c3d3245..186e792 100644
      private String password = "";
      private boolean enableAntialiasing = true;
      private boolean enableAnnotationRendering = true;
-@@ -150,11 +154,18 @@ public class PdfView extends PDFView implements OnPageChangeListener,OnLoadCompl
+@@ -110,9 +117,33 @@ public class PdfView extends PDFView implements OnPageChangeListener,OnLoadCompl
+ 
+     @Override
+     public void onPageChanged(int page, int numberOfPages) {
+-        // pdf lib page start from 0, convert it to our page (start from 1)
+-        page = page+1;
++        dispatchPageChanged(resolveReportedPage(page, numberOfPages, this.getPositionOffset()), numberOfPages);
++    }
++
++    private int resolveReportedPage(int nativePage, int numberOfPages, float positionOffset) {
++        if (numberOfPages <= 0) {
++            return 1;
++        }
++        int reportedPage = Math.min(Math.max(nativePage + 1, 1), numberOfPages);
++        if (this.documentFitsView() || Float.isNaN(positionOffset) || Float.isInfinite(positionOffset)) {
++            return reportedPage;
++        }
++        if (positionOffset <= DOCUMENT_EDGE_EPSILON) {
++            return 1;
++        }
++        if (positionOffset >= 1 - DOCUMENT_EDGE_EPSILON) {
++            return numberOfPages;
++        }
++        return reportedPage;
++    }
++
++    private void dispatchPageChanged(int page, int numberOfPages) {
+         this.page = page;
++        if (page == this.lastDispatchedPage && numberOfPages == this.lastDispatchedPageCount) {
++            return;
++        }
++        this.lastDispatchedPage = page;
++        this.lastDispatchedPageCount = numberOfPages;
+         showLog(format("%s %s / %s", path, page, numberOfPages));
+ 
+         WritableMap event = Arguments.createMap();
+@@ -150,11 +181,18 @@ public class PdfView extends PDFView implements OnPageChangeListener,OnLoadCompl
      // to set the dimensions to zero after first measurement.
      @Override
      protected void onSizeChanged(int w, int h, int oldw, int oldh) {
@@ -138,7 +184,18 @@ index c3d3245..186e792 100644
      }
  
      @Override
-@@ -375,11 +386,18 @@ public class PdfView extends PDFView implements OnPageChangeListener,OnLoadCompl
+@@ -240,6 +278,10 @@ public class PdfView extends PDFView implements OnPageChangeListener,OnLoadCompl
+         Constants.Pinch.MINIMUM_ZOOM = this.minScale;
+         Constants.Pinch.MAXIMUM_ZOOM = this.maxScale;
+ 
++        int numberOfPages = this.getPageCount();
++        if (numberOfPages > 0) {
++            dispatchPageChanged(resolveReportedPage(page, numberOfPages, positionOffset), numberOfPages);
++        }
+     }
+ 
+     @Override
+@@ -375,11 +417,18 @@ public class PdfView extends PDFView implements OnPageChangeListener,OnLoadCompl
                  .onDraw(this)
                  .onPageScroll(this)
                  .spacing(this.spacing)
@@ -157,7 +214,16 @@ index c3d3245..186e792 100644
                  .pageFling(this.pageFling)
                  .enableSwipe(!this.singlePage && this.scrollEnabled)
                  .enableDoubletap(!this.singlePage && this.enableDoubleTapZoom)
-@@ -424,6 +442,7 @@ public class PdfView extends PDFView implements OnPageChangeListener,OnLoadCompl
+@@ -419,11 +468,16 @@ public class PdfView extends PDFView implements OnPageChangeListener,OnLoadCompl
+     }
+ 
+     public void setPath(String path) {
++        if (this.path == null ? path != null : !this.path.equals(path)) {
++            this.lastDispatchedPage = 0;
++            this.lastDispatchedPageCount = 0;
++        }
+         this.path = path;
+     }
  
      // page start from 1
      public void setPage(int page) {
@@ -165,7 +231,7 @@ index c3d3245..186e792 100644
          this.page = Math.max(page, 1);
          this.handlePage(this.page - 1);
      }
-@@ -456,6 +475,22 @@ public class PdfView extends PDFView implements OnPageChangeListener,OnLoadCompl
+@@ -456,6 +510,22 @@ public class PdfView extends PDFView implements OnPageChangeListener,OnLoadCompl
          this.spacing = spacing;
      }
  

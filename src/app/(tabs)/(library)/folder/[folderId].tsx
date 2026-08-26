@@ -419,8 +419,8 @@ export default function FolderScreen() {
         <ActionRow
           description={
             actionTargetIsFavourite
-              ? `Unpin ${actionTargetType} from the top of the list.`
-              : `Pin ${actionTargetType} to the top of the list.`
+              ? `Unpin this ${actionTargetType} from the top of the list.`
+              : `Pin this ${actionTargetType} to the top of the list.`
           }
           icon={Star}
           iconFill={actionTargetIsFavourite ? colors.ink : undefined}
