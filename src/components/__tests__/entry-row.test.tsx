@@ -136,6 +136,13 @@ describe('EntryRow', () => {
     expect(selectedView.getByTestId('selection-checkbox-Notes.pdf').props.className).toContain(
       'bg-purple',
     );
+    expect(selectedView.getByTestId('selection-control-Notes.pdf')).toHaveAnimatedStyle({
+      opacity: 1,
+      width: 28,
+    });
+    expect(
+      selectedView.getByTestId('entry-menu-Notes.pdf', { includeHiddenElements: true }),
+    ).toHaveAnimatedStyle({ opacity: 0, width: 0 });
     expect(selectedView.queryByRole('button', { name: 'Manage Notes.pdf' })).toBeNull();
   });
 });

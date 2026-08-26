@@ -14,6 +14,7 @@ describe('FolderTile', () => {
     expect(view.getByRole('button', { name: 'Add folder' }).props.className).not.toContain(
       'active:translate',
     );
+    expect(view.getByTestId('folder-tile-shadow').props.className).toContain('bg-strong-line');
   });
 
   test('provides separate open and manage actions', async () => {
@@ -25,6 +26,7 @@ describe('FolderTile', () => {
 
     const openButton = view.getByRole('button', { name: 'Open Biology' });
     expect(openButton).toHaveStyle({ backgroundColor: colors.folderGreen });
+    expect(view.getByTestId('folder-tile-shadow').props.className).toContain('bg-offset-shadow');
     await fireEvent.press(openButton);
     await fireEvent.press(view.getByRole('button', { name: 'Manage Biology' }));
     expect(onPress).toHaveBeenCalledTimes(1);

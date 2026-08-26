@@ -422,9 +422,6 @@ export default function PdfScreen() {
                       style={{
                         fontFamily: 'DMSans_700Bold',
                         fontWeight: '700',
-                        textShadowColor: colors.white,
-                        textShadowOffset: { width: 0, height: 0 },
-                        textShadowRadius: 2,
                       }}>
                       {displayedPage} / {numberOfPages}
                     </AppText>

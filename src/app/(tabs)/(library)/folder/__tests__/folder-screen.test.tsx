@@ -272,8 +272,11 @@ describe('FolderScreen imports', () => {
       view.getByRole('button', { name: 'Open Notes.pdf, Favourited' }),
       'longPress',
     );
+    await act(async () => jest.advanceTimersByTime(180));
 
     expect(mockStackOptions?.title).toBe('1 Selected');
+    expect(view.getByTestId('add-folder-header-icon')).toHaveAnimatedStyle({ opacity: 0 });
+    expect(view.getByTestId('selection-header-icon')).toHaveAnimatedStyle({ opacity: 1 });
     expect(
       view.getAllByRole('checkbox').map((checkbox) => checkbox.props.accessibilityLabel),
     ).toEqual(['Deselect Notes.pdf', 'Select Diagram.jpg']);

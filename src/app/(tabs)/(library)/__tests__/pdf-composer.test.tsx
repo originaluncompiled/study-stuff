@@ -114,7 +114,10 @@ describe('PdfComposerScreen', () => {
     expect(view.queryByText('Build your PDF')).toBeNull();
     expect(view.getByTestId('pdf-composer-footer').props.style).toEqual({
       bottom: 0,
-      paddingBottom: 110,
+      paddingBottom: 104,
+    });
+    expect(view.getByTestId('pdf-composer-scroll-view').props.contentContainerStyle).toMatchObject({
+      paddingBottom: 180,
     });
     expect(view.getByText('1 file selected')).toBeTruthy();
     await fireEvent.press(view.getByRole('checkbox', { name: 'Add Page 2.jpg' }));

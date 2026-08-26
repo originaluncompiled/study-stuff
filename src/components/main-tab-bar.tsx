@@ -4,6 +4,7 @@ import Animated, { FadeIn, LinearTransition } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppText } from '@/components/app-text';
+import { colors as lightColors } from '@/constants/theme';
 import { useThemeColors } from '@/store/theme-store';
 import { useTimerStore } from '@/store/timer-store';
 
@@ -45,28 +46,31 @@ export function MainTabBar({
       <View className="flex-row items-center gap-2">
         {tabs.map(({ icon: Icon, label, route }) => {
           const selected = route === activeRoute;
+          const iconColor = selected ? lightColors.purple : colors.contrastLine;
           const icon =
             route === 'timer' ? (
               <View className="relative h-[22px] w-[22px]" testID="timer-tab-icon-container">
                 <Icon
-                  color={selected ? colors.purple : colors.fixedInk}
+                  color={iconColor}
                   size={22}
                   strokeWidth={2.4}
+                  testID={`${label.toLowerCase()}-tab-icon`}
                 />
                 {timerRunning ? (
                   <View
-                    className="absolute h-3 w-3 rounded-full border-2 border-contrast-line bg-purple"
+                    className="absolute h-3 w-3 rounded-full border border-contrast-line bg-purple"
                     pointerEvents="none"
-                    style={{ left: 5, top: -10.5 }}
+                    style={{ left: 6, top: -10.5 }}
                     testID="timer-tab-active-indicator"
                   />
                 ) : null}
               </View>
             ) : (
               <Icon
-                color={selected ? colors.purple : colors.fixedInk}
+                color={iconColor}
                 size={22}
                 strokeWidth={2.4}
+                testID={`${label.toLowerCase()}-tab-icon`}
               />
             );
 

@@ -166,7 +166,7 @@ export function ImmersiveViewerChrome({
               accessibilityLabel={`${timerPhase === 'study' ? 'Study' : 'Rest'} timer${timerStatus === 'paused' ? ' paused' : ''}, ${formatTimer(timerSecondsRemaining)} remaining. Open timer controls.`}
               accessibilityRole="button"
               accessibilityState={{ expanded: timerManagerVisible }}
-              className="h-11 min-w-28 flex-row items-center justify-center gap-2 rounded-full border-2 border-strong-line bg-purple px-4 active:bg-purple-dark"
+              className="h-11 min-w-28 flex-row items-center justify-center gap-2 rounded-full border-2 border-offset-shadow bg-purple px-4 active:bg-purple-dark"
               onPress={() => setTimerManagerSession(timerSession)}>
               <TimerPillIcon
                 color={colors.onPurple}

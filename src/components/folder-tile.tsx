@@ -40,7 +40,12 @@ export function FolderTile(props: FolderTileProps) {
   return (
     <View className="w-full">
       <View className="relative aspect-[1.2]">
-        <View className="absolute inset-0 translate-x-1 translate-y-1 rounded-[26px] bg-offset-shadow" />
+        <View
+          className={`absolute inset-0 translate-x-1 translate-y-1 rounded-[26px] ${
+            add ? 'bg-strong-line' : 'bg-offset-shadow'
+          }`}
+          testID="folder-tile-shadow"
+        />
         <Pressable
           accessibilityActions={accessibilityActions}
           accessibilityHint={add ? undefined : 'Long press and drag to reorder.'}

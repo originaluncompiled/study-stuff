@@ -238,7 +238,9 @@ export default function TimerScreen() {
                   width: dialSize,
                 }}
               />
-              <View className="flex-1 rounded-full border-2 border-strong-line bg-purple p-3">
+              <View
+                className="flex-1 rounded-full border-2 border-contrast-line bg-purple p-3"
+                testID="study-clock-ring">
                 <View className="flex-1 items-center justify-center rounded-full border-2 border-strong-line bg-paper-raised px-4">
                   {status === 'running' || status === 'paused' ? (
                     <AppText
@@ -325,7 +327,7 @@ export default function TimerScreen() {
                 accessibilityLabel={buttonLabel}
                 accessibilityRole="button"
                 accessibilityState={{ disabled: startDisabled }}
-                className={`h-16 flex-row items-center justify-center gap-3 rounded-2xl border-2 border-strong-line bg-timer-action px-5 active:bg-timer-action-pressed ${
+                className={`h-16 flex-row items-center justify-center gap-3 rounded-2xl border-2 border-offset-shadow bg-timer-action px-5 active:bg-timer-action-pressed ${
                   startDisabled ? 'opacity-50' : ''
                 }`}
                 onPress={handleTimerPress}>

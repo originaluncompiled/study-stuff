@@ -80,6 +80,7 @@ describe('PdfScreen', () => {
       name: 'Study timer, 25:00 remaining. Open timer controls.',
     });
     expect(timerPill.props.className).toContain('bg-purple');
+    expect(timerPill.props.className).toContain('border-offset-shadow');
     expect(timerPill.props.className).toContain('h-11');
     expect(view.getByTestId('pdf-timer-running-icon')).toBeTruthy();
     expect(view.getByTestId('pdf-header')).toHaveStyle({ height: 91, paddingTop: 47 });
@@ -326,13 +327,14 @@ describe('PdfScreen', () => {
     });
     expect(view.getByRole('adjustable', { name: 'Page 3 of 10' })).toBeTruthy();
     expect(view.getByText('3 / 10').props.className).not.toContain('flex-1');
-    expect(StyleSheet.flatten(view.getByText('3 / 10').props.style)).toMatchObject({
+    const scrubberTextStyle = StyleSheet.flatten(view.getByText('3 / 10').props.style);
+    expect(scrubberTextStyle).toMatchObject({
       fontFamily: 'DMSans_700Bold',
       fontWeight: '700',
-      textShadowColor: colors.white,
-      textShadowOffset: { width: 0, height: 0 },
-      textShadowRadius: 2,
     });
+    expect(scrubberTextStyle).not.toHaveProperty('textShadowColor');
+    expect(scrubberTextStyle).not.toHaveProperty('textShadowOffset');
+    expect(scrubberTextStyle).not.toHaveProperty('textShadowRadius');
     expect(view.getByText('3 / 10').props.className).toContain('text-[15px]');
 
     const panGesture = getByGestureTestId('pdf-page-scrubber-pan');

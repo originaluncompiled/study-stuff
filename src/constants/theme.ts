@@ -53,7 +53,7 @@ export const darkColors: ThemeColors = {
   strongLine: '#746A77',
   contrastLine: '#F7F1E3',
   offsetShadow: '#F7F1E3',
-  navSurface: '#F7F1E3',
+  navSurface: '#19161D',
   danger: '#FF938A',
   surfacePressed: '#342E38',
 };

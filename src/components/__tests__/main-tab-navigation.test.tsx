@@ -2,8 +2,9 @@ import { act, fireEvent, render } from '@testing-library/react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import TabsLayout from '@/app/(tabs)/_layout';
-import { colors } from '@/constants/theme';
+import { colors, darkColors } from '@/constants/theme';
 import { createDefaultTimerState, reconcileTimerState } from '@/lib/timer';
+import { useThemeStore } from '@/store/theme-store';
 import { useTimerStore } from '@/store/timer-store';
 
 const mockDispatch = jest.fn();
@@ -61,12 +62,40 @@ describe('main tab navigation', () => {
     jest.clearAllMocks();
     mockTimerScreenOptions = undefined;
     mockState.index = 0;
+    useThemeStore.setState({ mode: 'light' });
     useTimerStore.setState({
       ...reconcileTimerState(createDefaultTimerState(), 0),
       hydrated: true,
       hydrationError: null,
       persistenceError: null,
     });
+  });
+
+  it('uses the page background for unselected tabs in dark mode', async () => {
+    useThemeStore.setState({ mode: 'dark' });
+
+    const view = await render(
+      <SafeAreaProvider
+        initialMetrics={{
+          frame: { height: 844, width: 390, x: 0, y: 0 },
+          insets: { bottom: 34, left: 0, right: 0, top: 47 },
+        }}>
+        <TabsLayout />
+      </SafeAreaProvider>,
+    );
+
+    expect(view.getByTestId('library-tab-background')).toHaveStyle({
+      backgroundColor: darkColors.ink,
+    });
+    expect(view.getByTestId('timer-tab-background')).toHaveStyle({
+      backgroundColor: darkColors.paper,
+    });
+    expect(view.getByTestId('settings-tab-background')).toHaveStyle({
+      backgroundColor: darkColors.paper,
+    });
+    expect(view.getByTestId('library-tab-icon').props.color).toBe(colors.purple);
+    expect(view.getByTestId('timer-tab-icon').props.color).toBe(darkColors.offWhite);
+    expect(view.getByTestId('settings-tab-icon').props.color).toBe(darkColors.offWhite);
   });
 
   it('uses one horizontal pager for taps and swipes', async () => {
@@ -157,9 +186,9 @@ describe('main tab navigation', () => {
     await act(async () => {
       useTimerStore.setState({ status: 'running', phase: 'study' });
     });
-    expect(view.getByTestId('timer-tab-active-indicator')).toHaveStyle({ left: 5, top: -10.5 });
+    expect(view.getByTestId('timer-tab-active-indicator')).toHaveStyle({ left: 6, top: -10.5 });
     expect(view.getByTestId('timer-tab-active-indicator').props.className).toContain(
-      'border-2 border-contrast-line bg-purple',
+      'border border-contrast-line bg-purple',
     );
     expect(view.getByRole('tab', { name: 'Timer' }).props.className).toContain(
       'overflow-hidden',
@@ -172,11 +201,11 @@ describe('main tab navigation', () => {
 
     mockState.index = 1;
     await view.rerender(renderTabs());
-    expect(view.getByTestId('timer-tab-active-indicator')).toHaveStyle({ left: 5, top: -10.5 });
+    expect(view.getByTestId('timer-tab-active-indicator')).toHaveStyle({ left: 6, top: -10.5 });
 
     mockState.index = 0;
     await view.rerender(renderTabs());
-    expect(view.getByTestId('timer-tab-active-indicator')).toHaveStyle({ left: 5, top: -10.5 });
+    expect(view.getByTestId('timer-tab-active-indicator')).toHaveStyle({ left: 6, top: -10.5 });
 
     await act(async () => {
       useTimerStore.setState({ phase: 'rest' });

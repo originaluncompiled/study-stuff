@@ -208,11 +208,12 @@ export default function PdfComposerScreen() {
       <Animated.ScrollView
         ref={scrollableRef}
         contentContainerStyle={{
-          paddingBottom: tabBarHeight + 88,
+          paddingBottom: tabBarHeight + 82,
           paddingHorizontal: 20,
           paddingTop: 16,
         }}
-        showsVerticalScrollIndicator={false}>
+        showsVerticalScrollIndicator={false}
+        testID="pdf-composer-scroll-view">
         {initialLoad.error ? (
           <View className="rounded-2xl border border-danger bg-paper-raised px-5 py-4">
             <AppText variant="label" className="text-danger">
@@ -245,7 +246,7 @@ export default function PdfComposerScreen() {
 
       <View
         className="absolute inset-x-0 bg-paper px-5 pt-3"
-        style={{ bottom: 0, paddingBottom: tabBarHeight + 12 }}
+        style={{ bottom: 0, paddingBottom: tabBarHeight + 6 }}
         testID="pdf-composer-footer">
         <View className="mx-auto w-full max-w-xl flex-row items-center gap-4">
           <AppText variant="caption" className="flex-1">

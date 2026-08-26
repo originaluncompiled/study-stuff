@@ -115,6 +115,23 @@ describe('TimerScreen', () => {
     await view.unmount();
   });
 
+  test('matches the colored action border to its shadow without changing the reset border', async () => {
+    const view = await renderTimer();
+
+    expect(view.getByTestId('study-clock-ring').props.className).toContain(
+      'border-contrast-line',
+    );
+    expect(view.getByRole('button', { name: 'Start Timer' }).props.className).toContain(
+      'border-offset-shadow',
+    );
+
+    await fireEvent.press(view.getByRole('button', { name: 'Start Timer' }));
+
+    expect(view.getByRole('button', { name: 'Reset Timer' }).props.className).toContain(
+      'border-strong-line',
+    );
+  });
+
   test('moves from study to rest and waits for a continuation choice', async () => {
     jest.useFakeTimers();
     jest.setSystemTime(new Date('2026-08-22T12:00:00Z'));

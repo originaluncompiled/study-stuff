@@ -15,6 +15,12 @@ import {
 } from 'lucide-react-native';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, FlatList, Pressable, ScrollView, View } from 'react-native';
+import Animated, {
+  ReduceMotion,
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+} from 'react-native-reanimated';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ActionRow, ActionSheet } from '@/components/action-sheet';
@@ -93,6 +99,30 @@ export default function FolderScreen() {
   const orderedEntries = orderLibraryEntries(entries, favouritePaths);
   const selectedEntries = orderedEntries.filter((entry) => selectedPaths.has(entry.relativePath));
   const selectionMode = selectedPaths.size > 0;
+  const headerSelectionProgress = useSharedValue(selectionMode ? 1 : 0);
+  const addHeaderActionAnimatedStyle = useAnimatedStyle(() => ({
+    opacity: 1 - headerSelectionProgress.get(),
+    transform: [
+      { rotate: `${headerSelectionProgress.get() * 45}deg` },
+      { scale: 1 - headerSelectionProgress.get() * 0.2 },
+    ],
+  }));
+  const selectionHeaderActionAnimatedStyle = useAnimatedStyle(() => ({
+    opacity: headerSelectionProgress.get(),
+    transform: [
+      { rotate: `${(1 - headerSelectionProgress.get()) * -45}deg` },
+      { scale: 0.8 + headerSelectionProgress.get() * 0.2 },
+    ],
+  }));
+
+  useEffect(() => {
+    headerSelectionProgress.set(
+      withTiming(selectionMode ? 1 : 0, {
+        duration: 180,
+        reduceMotion: ReduceMotion.System,
+      }),
+    );
+  }, [headerSelectionProgress, selectionMode]);
 
   useFocusEffect(
     useCallback(() => {
@@ -426,12 +456,25 @@ export default function FolderScreen() {
               onPress={() =>
                 selectionMode ? setSelectionSheetVisible(true) : setAddSheetVisible(true)
               }>
-              {selectionMode ? (
-                <MoreHorizontal color={colors.ink} size={25} />
-              ) : addingFiles ? (
+              {!selectionMode && addingFiles ? (
                 <ActivityIndicator color={colors.purple} />
               ) : (
-                <Plus color={colors.ink} size={25} />
+                <>
+                  <Animated.View
+                    className="absolute inset-0 items-center justify-center"
+                    pointerEvents="none"
+                    style={addHeaderActionAnimatedStyle}
+                    testID="add-folder-header-icon">
+                    <Plus color={colors.ink} size={25} />
+                  </Animated.View>
+                  <Animated.View
+                    className="absolute inset-0 items-center justify-center"
+                    pointerEvents="none"
+                    style={selectionHeaderActionAnimatedStyle}
+                    testID="selection-header-icon">
+                    <MoreHorizontal color={colors.ink} size={25} />
+                  </Animated.View>
+                </>
               )}
             </Pressable>
           ),
