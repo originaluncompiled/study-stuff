@@ -14,6 +14,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppText } from '@/components/app-text';
 import { TimerManagerSheet } from '@/components/timer-manager-sheet';
+import { iconButtonRipple } from '@/constants/press-feedback';
 import { formatTimer } from '@/lib/timer';
 import { useThemeColors, useThemeStore } from '@/store/theme-store';
 import { useTimerStore } from '@/store/timer-store';
@@ -134,6 +135,7 @@ export function ImmersiveViewerChrome({
           <Pressable
             accessibilityLabel="Go back"
             accessibilityRole="button"
+            android_ripple={iconButtonRipple}
             className={`h-11 w-12 items-center justify-center rounded-full ${dark ? 'active:bg-white/10' : 'active:bg-line/50'}`}
             onPress={onBack}>
             <ChevronLeft color={foreground} size={30} strokeWidth={2.2} />

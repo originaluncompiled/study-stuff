@@ -2,6 +2,7 @@ import { Folder, MoreHorizontal, Plus } from 'lucide-react-native';
 import { Pressable, View } from 'react-native';
 
 import { AppText } from '@/components/app-text';
+import { iconButtonRipple } from '@/constants/press-feedback';
 import { colors, folderColorValues } from '@/constants/theme';
 import { useThemeColors } from '@/store/theme-store';
 import type { FolderColor } from '@/types/library';
@@ -76,6 +77,7 @@ export function FolderTile(props: FolderTileProps) {
           <Pressable
             accessibilityLabel={`Manage ${name}`}
             accessibilityRole="button"
+            android_ripple={iconButtonRipple}
             className="absolute right-2 top-2 h-10 w-10 items-center justify-center rounded-full bg-paper-raised/90 active:bg-paper"
             hitSlop={8}
             onPress={props.onMenu}>

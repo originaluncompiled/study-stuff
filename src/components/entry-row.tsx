@@ -19,6 +19,7 @@ import Animated, {
 } from 'react-native-reanimated';
 
 import { AppText } from '@/components/app-text';
+import { iconButtonRipple } from '@/constants/press-feedback';
 import { useThemeColors } from '@/store/theme-store';
 import type { LibraryEntry } from '@/types/library';
 
@@ -193,6 +194,7 @@ export function EntryRow({
         <Pressable
           accessibilityLabel={`Manage ${entry.name}`}
           accessibilityRole="button"
+          android_ripple={iconButtonRipple}
           hitSlop={6}
           onPress={onMenu}
           onPressIn={() => setMenuPressed(true)}

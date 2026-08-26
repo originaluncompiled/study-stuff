@@ -28,6 +28,7 @@ import { AppText } from '@/components/app-text';
 import { EntryRow } from '@/components/entry-row';
 import { getMainTabBarHeight } from '@/components/main-tab-bar';
 import { NameDialog } from '@/components/name-dialog';
+import { iconButtonRipple } from '@/constants/press-feedback';
 import { orderLibraryEntries } from '@/lib/library-entry-order';
 import { joinRelativePath, normalizeRelativePath, parentRelativePath } from '@/lib/paths';
 import {
@@ -450,6 +451,7 @@ export default function FolderScreen() {
                   ? { expanded: selectionSheetVisible }
                   : { busy: addingFiles, disabled: addingFiles }
               }
+              android_ripple={iconButtonRipple}
               className="h-11 w-11 items-center justify-center rounded-full active:bg-line/50"
               disabled={!selectionMode && addingFiles}
               hitSlop={8}

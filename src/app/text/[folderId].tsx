@@ -21,6 +21,7 @@ import {
   ImmersiveViewerChrome,
   useImmersiveViewerChrome,
 } from '@/components/immersive-viewer-chrome';
+import { iconButtonRipple } from '@/constants/press-feedback';
 import { normalizeRelativePath } from '@/lib/paths';
 import { readTextFile, writeTextFile } from '@/services/library-files';
 import { useLibraryStore } from '@/store/library-store';
@@ -162,6 +163,7 @@ export default function TextScreen() {
       accessibilityLabel="Save changes"
       accessibilityRole="button"
       accessibilityState={{ busy: saving, disabled: saving }}
+      android_ripple={iconButtonRipple}
       className="h-11 w-12 items-center justify-center rounded-full active:bg-line/50"
       disabled={saving}
       onPress={() => void save()}>
@@ -171,6 +173,7 @@ export default function TextScreen() {
     <Pressable
       accessibilityLabel="Edit text file"
       accessibilityRole="button"
+      android_ripple={iconButtonRipple}
       className="h-11 w-12 items-center justify-center rounded-full active:bg-line/50"
       onPress={() => {
         setEditing(true);
