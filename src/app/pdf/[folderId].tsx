@@ -446,6 +446,7 @@ export default function PdfScreen() {
         headerVisible={headerVisible}
         onBack={() => router.back()}
         testIDPrefix="pdf"
+        timerPillGap={6}
         title={fileName}
       />
     </View>

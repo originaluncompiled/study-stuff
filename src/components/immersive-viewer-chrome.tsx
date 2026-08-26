@@ -77,6 +77,7 @@ export function ImmersiveViewerChrome({
   onBack,
   rightAction,
   testIDPrefix,
+  timerPillGap = TIMER_PILL_GAP,
   title,
   tone = 'dark',
 }: {
@@ -85,6 +86,7 @@ export function ImmersiveViewerChrome({
   onBack: () => void;
   rightAction?: ReactNode;
   testIDPrefix: string;
+  timerPillGap?: number;
   title: string;
   tone?: 'dark' | 'paper';
 }) {
@@ -155,7 +157,7 @@ export function ImmersiveViewerChrome({
           testID={`${testIDPrefix}-timer-pill`}
           className="absolute left-0 right-0 z-40 items-center"
           style={[
-            { top: chrome.headerHeight + TIMER_PILL_GAP },
+            { top: chrome.headerHeight + timerPillGap },
             chrome.headerAnimatedStyle,
           ]}>
           <View className="relative h-11 min-w-28">

@@ -84,7 +84,7 @@ describe('PdfScreen', () => {
     expect(view.getByTestId('pdf-timer-running-icon')).toBeTruthy();
     expect(view.getByTestId('pdf-header')).toHaveStyle({ height: 91, paddingTop: 47 });
     expect(view.getByTestId('pdf-timer-pill').props.className).toContain('absolute');
-    expect(view.getByTestId('pdf-timer-pill')).toHaveStyle({ top: 103 });
+    expect(view.getByTestId('pdf-timer-pill')).toHaveStyle({ top: 97 });
     expect(view.getByTestId('pdf-viewport').props.style[0]).toMatchObject({
       width: Dimensions.get('window').width,
     });
