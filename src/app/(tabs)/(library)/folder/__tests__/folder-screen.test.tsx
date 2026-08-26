@@ -7,6 +7,12 @@ const mockPickAndCopyFiles = jest.fn(async (_folderId: string, _path?: string) =
 const mockPickAndCopyImages = jest.fn(async (_folderId: string, _path?: string) => 3);
 const mockTakeAndCopyPhoto = jest.fn(async (_folderId: string, _path?: string) => 1);
 const mockTouchFolder = jest.fn(async () => undefined);
+const mockListDirectory = jest.fn();
+const mockPush = jest.fn();
+const mockCreateLibraryPdf = jest.fn(async (_options: unknown) => ({
+  name: 'Scan.pdf',
+  uri: 'file://Scan.pdf',
+}));
 
 jest.mock('expo-router', () => ({
   Stack: {
@@ -14,7 +20,11 @@ jest.mock('expo-router', () => ({
       options.headerRight?.() ?? null,
   },
   useLocalSearchParams: () => ({ folderId: 'folder-1', path: 'Chapter 1' }),
-  useRouter: () => ({ push: jest.fn() }),
+  useFocusEffect: (callback: () => void | (() => void)) => {
+    const React = jest.requireActual<typeof import('react')>('react');
+    React.useEffect(callback, [callback]);
+  },
+  useRouter: () => ({ push: mockPush }),
 }));
 
 jest.mock('expo-haptics', () => ({
@@ -34,11 +44,16 @@ jest.mock('@/services/library-files', () => ({
   createSubfolder: jest.fn(),
   createTextFile: jest.fn(),
   deleteEntry: jest.fn(),
-  listDirectory: () => [],
+  getLibraryFile: (_folderId: string, path: string) => ({ uri: `file://${path}` }),
+  listDirectory: () => mockListDirectory(),
   pickAndCopyFiles: (folderId: string, path?: string) => mockPickAndCopyFiles(folderId, path),
   pickAndCopyImages: (folderId: string, path?: string) => mockPickAndCopyImages(folderId, path),
   renameEntry: jest.fn(),
   takeAndCopyPhoto: (folderId: string, path?: string) => mockTakeAndCopyPhoto(folderId, path),
+}));
+
+jest.mock('@/services/pdf-files', () => ({
+  createLibraryPdf: (options: unknown) => mockCreateLibraryPdf(options),
 }));
 
 jest.mock('@/store/library-store', () => ({
@@ -80,6 +95,7 @@ describe('FolderScreen imports', () => {
   beforeEach(() => {
     jest.useFakeTimers();
     jest.clearAllMocks();
+    mockListDirectory.mockReturnValue([]);
   });
 
   afterEach(() => {
@@ -124,5 +140,86 @@ describe('FolderScreen imports', () => {
       expect(mockTakeAndCopyPhoto).toHaveBeenCalledWith('folder-1', 'Chapter 1'),
     );
     await flushFolderLoad();
+  });
+
+  test('offers single and multi-file conversion for images', async () => {
+    mockListDirectory.mockReturnValue([
+      {
+        childCount: null,
+        kind: 'image',
+        name: 'Scan.jpg',
+        relativePath: 'Chapter 1/Scan.jpg',
+        size: 2048,
+      },
+    ]);
+    const view = await renderFolder();
+
+    await flushFolderLoad();
+    await fireEvent.press(view.getByRole('button', { name: 'Manage Scan.jpg' }));
+    await fireEvent.press(view.getByRole('button', { name: 'Convert to PDF' }));
+
+    expect(view.getByRole('button', { name: 'Just this image' })).toBeTruthy();
+    await fireEvent.press(view.getByRole('button', { name: /^Multiple files in this folder/ }));
+    expect(mockPush).toHaveBeenCalledWith({
+      pathname: '/(tabs)/(library)/pdf-composer',
+      params: { folderId: 'folder-1', path: 'Chapter 1' },
+    });
+  });
+
+  test('creates a PDF from one image', async () => {
+    mockListDirectory.mockReturnValue([
+      {
+        childCount: null,
+        kind: 'image',
+        name: 'Scan.jpg',
+        relativePath: 'Chapter 1/Scan.jpg',
+        size: 2048,
+      },
+    ]);
+    const view = await renderFolder();
+
+    await flushFolderLoad();
+    await fireEvent.press(view.getByRole('button', { name: 'Manage Scan.jpg' }));
+    await fireEvent.press(view.getByRole('button', { name: 'Convert to PDF' }));
+    await fireEvent.press(view.getByRole('button', { name: 'Just this image' }));
+    await fireEvent.changeText(view.getByLabelText('PDF name'), 'Lecture scan');
+    await fireEvent.press(view.getByRole('button', { name: 'Create PDF' }));
+
+    await waitFor(() =>
+      expect(mockCreateLibraryPdf).toHaveBeenCalledWith({
+        folderId: 'folder-1',
+        outputName: 'Lecture scan',
+        path: 'Chapter 1',
+        sources: [
+          {
+            kind: 'image',
+            name: 'Scan.jpg',
+            uri: 'file://Chapter 1/Scan.jpg',
+          },
+        ],
+      }),
+    );
+  });
+
+  test('offers PDF combining for PDF files', async () => {
+    mockListDirectory.mockReturnValue([
+      {
+        childCount: null,
+        kind: 'pdf',
+        name: 'Notes.pdf',
+        relativePath: 'Chapter 1/Notes.pdf',
+        size: 2048,
+      },
+    ]);
+    const view = await renderFolder();
+
+    await flushFolderLoad();
+    await fireEvent.press(view.getByRole('button', { name: 'Manage Notes.pdf' }));
+    await fireEvent.press(view.getByRole('button', { name: 'Combine into PDF' }));
+
+    expect(mockPush).toHaveBeenCalledWith({
+      pathname: '/(tabs)/(library)/pdf-composer',
+      params: { folderId: 'folder-1', path: 'Chapter 1' },
+    });
   });
 });

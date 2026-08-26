@@ -3,6 +3,7 @@
   "main": "expo-router/entry",
   "version": "1.0.0",
   "dependencies": {
+    "@cantoo/pdf-lib": "^2.9.1",
     "@config-plugins/react-native-blob-util": "^14.0.2",
     "@config-plugins/react-native-pdf": "^14.0.2",
     "@expo-google-fonts/dm-sans": "^0.4.2",
@@ -16,6 +17,7 @@
     "expo-font": "~57.0.1",
     "expo-haptics": "~57.0.1",
     "expo-image": "~57.0.3",
+    "expo-image-manipulator": "~57.0.13",
     "expo-image-picker": "~57.0.13",
     "expo-linking": "~57.0.7",
     "expo-router": "~57.0.15",

@@ -19,6 +19,7 @@ type NameDialogProps = {
   inputLabel?: string;
   onClose: () => void;
   onSubmit: (name: string) => Promise<void> | void;
+  submittingLabel?: string;
   title: string;
   visible: boolean;
 };
@@ -30,6 +31,7 @@ export function NameDialog({
   inputLabel = 'Folder name',
   onClose,
   onSubmit,
+  submittingLabel,
   title,
   visible,
 }: NameDialogProps) {
@@ -45,6 +47,7 @@ export function NameDialog({
       inputLabel={inputLabel}
       onClose={onClose}
       onSubmit={onSubmit}
+      submittingLabel={submittingLabel}
       title={title}
     />
   );
@@ -57,6 +60,7 @@ function NameDialogContent({
   inputLabel,
   onClose,
   onSubmit,
+  submittingLabel,
   title,
 }: Omit<NameDialogProps, 'visible'>) {
   const colors = useThemeColors();
@@ -95,8 +99,14 @@ function NameDialogContent({
     }
   }
 
+  function close() {
+    if (!submitting) {
+      onClose();
+    }
+  }
+
   return (
-    <Modal animationType="fade" transparent visible onRequestClose={onClose}>
+    <Modal animationType="fade" transparent visible onRequestClose={close}>
       <KeyboardAvoidingView
         behavior="height"
         className={
@@ -104,7 +114,7 @@ function NameDialogContent({
             ? 'flex-1 bg-black/40 px-5'
             : 'flex-1 justify-center bg-black/40 px-5'
         }>
-        <Pressable accessible={false} className="absolute inset-0" onPress={onClose} />
+        <Pressable accessible={false} className="absolute inset-0" onPress={close} />
         <View
           className={centerInTopHalf ? 'justify-center' : undefined}
           style={centerInTopHalf ? { height: screenHeight / 2 } : undefined}>
@@ -142,7 +152,7 @@ function NameDialogContent({
                 accessibilityRole="button"
                 className="min-h-12 justify-center rounded-xl px-4 active:bg-line/40"
                 disabled={submitting}
-                onPress={onClose}>
+                onPress={close}>
                 <AppText variant="label">Cancel</AppText>
               </Pressable>
               <Pressable
@@ -153,7 +163,16 @@ function NameDialogContent({
                 disabled={submitting}
                 onPress={() => void submit()}>
                 {submitting ? (
-                  <ActivityIndicator color={colors.onPurple} />
+                  <View
+                    accessibilityLiveRegion="polite"
+                    className="flex-row items-center justify-center gap-2">
+                    <ActivityIndicator color={colors.onPurple} />
+                    {submittingLabel ? (
+                      <AppText variant="label" className="text-on-purple">
+                        {submittingLabel}
+                      </AppText>
+                    ) : null}
+                  </View>
                 ) : (
                   <AppText variant="label" className="text-on-purple">
                     {confirmLabel ?? 'Create'}

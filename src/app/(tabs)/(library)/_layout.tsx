@@ -20,6 +20,7 @@ export default function LibraryStackLayout() {
       }}>
       <Stack.Screen name="index" options={{ headerShown: false }} />
       <Stack.Screen name="folder/[folderId]" />
+      <Stack.Screen name="pdf-composer" options={{ title: 'Create PDF' }} />
     </Stack>
   );
 }

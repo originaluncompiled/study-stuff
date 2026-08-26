@@ -1,5 +1,5 @@
 import * as Haptics from 'expo-haptics';
-import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
+import { Stack, useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import {
   Camera,
   ChevronRight,
@@ -12,7 +12,7 @@ import {
   Star,
   Trash2,
 } from 'lucide-react-native';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, FlatList, Pressable, ScrollView, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -33,12 +33,14 @@ import {
   createSubfolder,
   createTextFile,
   deleteEntry,
+  getLibraryFile,
   listDirectory,
   pickAndCopyFiles,
   pickAndCopyImages,
   renameEntry,
   takeAndCopyPhoto,
 } from '@/services/library-files';
+import { createLibraryPdf } from '@/services/pdf-files';
 import { useLibraryStore } from '@/store/library-store';
 import { useThemeColors } from '@/store/theme-store';
 import type { LibraryEntry } from '@/types/library';
@@ -59,11 +61,14 @@ export default function FolderScreen() {
   const [loadingEntries, setLoadingEntries] = useState(true);
   const [addingFiles, setAddingFiles] = useState(false);
   const [revision, setRevision] = useState(0);
+  const hasLoadedEntries = useRef(false);
   const [addSheetVisible, setAddSheetVisible] = useState(false);
   const [newFolderDialogVisible, setNewFolderDialogVisible] = useState(false);
   const [newTextDialogVisible, setNewTextDialogVisible] = useState(false);
   const [actionTarget, setActionTarget] = useState<LibraryEntry | null>(null);
   const [renameTarget, setRenameTarget] = useState<LibraryEntry | null>(null);
+  const [convertTarget, setConvertTarget] = useState<LibraryEntry | null>(null);
+  const [singlePdfTarget, setSinglePdfTarget] = useState<LibraryEntry | null>(null);
 
   let currentPath = '';
   let pathError: string | null = null;
@@ -75,6 +80,7 @@ export default function FolderScreen() {
 
   const pathSegments = currentPath.split('/').filter(Boolean);
   const title = pathSegments.at(-1) || folder?.name || 'Folder';
+  const folderMissing = !folder;
   const actionTargetIsFavourite = Boolean(
     actionTarget && favouritePaths.has(actionTarget.relativePath),
   );
@@ -82,24 +88,29 @@ export default function FolderScreen() {
   const breadcrumbSegments =
     folder && pathSegments.length > 0 ? [folder.name, ...pathSegments.slice(0, -1)] : [];
 
-  useEffect(() => {
-    const timeout = setTimeout(() => {
-      if (!folder || pathError) {
-        setEntries([]);
-        setLoadingEntries(false);
-        return;
-      }
-      try {
-        setEntries(listDirectory(folderId, currentPath));
-        setLoadError(null);
-      } catch (error) {
-        setLoadError(getErrorMessage(error));
-      } finally {
-        setLoadingEntries(false);
-      }
-    }, 0);
-    return () => clearTimeout(timeout);
-  }, [currentPath, folder, folderId, pathError, revision]);
+  useFocusEffect(
+    useCallback(() => {
+      setLoadingEntries(revision === 0 && !hasLoadedEntries.current);
+      const timeout = setTimeout(() => {
+        if (folderMissing || pathError) {
+          setEntries([]);
+          hasLoadedEntries.current = true;
+          setLoadingEntries(false);
+          return;
+        }
+        try {
+          setEntries(listDirectory(folderId, currentPath));
+          setLoadError(null);
+        } catch (error) {
+          setLoadError(getErrorMessage(error));
+        } finally {
+          hasLoadedEntries.current = true;
+          setLoadingEntries(false);
+        }
+      }, 0);
+      return () => clearTimeout(timeout);
+    }, [currentPath, folderId, folderMissing, pathError, revision]),
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -184,6 +195,37 @@ export default function FolderScreen() {
           ? '/image/[folderId]'
           : '/text/[folderId]';
     router.push({ pathname, params: { folderId, path: entry.relativePath } });
+  }
+
+  function openPdfComposer() {
+    setActionTarget(null);
+    setConvertTarget(null);
+    router.push({
+      pathname: '/(tabs)/(library)/pdf-composer',
+      params: { folderId, path: currentPath },
+    });
+  }
+
+  async function createSingleImagePdf(name: string) {
+    if (!singlePdfTarget || singlePdfTarget.kind !== 'image') {
+      return;
+    }
+
+    await createLibraryPdf({
+      folderId,
+      outputName: name,
+      path: currentPath,
+      sources: [
+        {
+          kind: 'image',
+          name: singlePdfTarget.name,
+          uri: getLibraryFile(folderId, singlePdfTarget.relativePath).uri,
+        },
+      ],
+    });
+    setRevision((current) => current + 1);
+    await touchFolder(folderId).catch(() => undefined);
+    void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
   }
 
   async function toggleFavourite(entry: LibraryEntry) {
@@ -416,6 +458,19 @@ export default function FolderScreen() {
         title={actionTarget?.name ?? 'Item options'}
         visible={Boolean(actionTarget)}
         onDismiss={() => setActionTarget(null)}>
+        {actionTarget?.kind === 'image' ? (
+          <ActionRow
+            icon={FileText}
+            label="Convert to PDF"
+            onPress={() => {
+              setConvertTarget(actionTarget);
+              setActionTarget(null);
+            }}
+          />
+        ) : null}
+        {actionTarget?.kind === 'pdf' ? (
+          <ActionRow icon={FilePlus2} label="Combine into PDF" onPress={openPdfComposer} />
+        ) : null}
         <ActionRow
           description={
             actionTargetIsFavourite
@@ -443,6 +498,26 @@ export default function FolderScreen() {
         />
       </ActionSheet>
 
+      <ActionSheet
+        title="Convert to PDF"
+        visible={Boolean(convertTarget)}
+        onDismiss={() => setConvertTarget(null)}>
+        <ActionRow
+          icon={Image}
+          label="Just this image"
+          onPress={() => {
+            setSinglePdfTarget(convertTarget);
+            setConvertTarget(null);
+          }}
+        />
+        <ActionRow
+          description="Choose and reorder images or PDFs from this folder."
+          icon={FilePlus2}
+          label="Multiple files in this folder"
+          onPress={openPdfComposer}
+        />
+      </ActionSheet>
+
       <NameDialog
         title="Create new subfolder"
         visible={newFolderDialogVisible}
@@ -465,6 +540,16 @@ export default function FolderScreen() {
         visible={Boolean(renameTarget)}
         onClose={() => setRenameTarget(null)}
         onSubmit={submitRename}
+      />
+      <NameDialog
+        confirmLabel="Create PDF"
+        initialValue={singlePdfTarget?.name.replace(/\.[^.]+$/, '')}
+        inputLabel="PDF name"
+        submittingLabel="Building..."
+        title="Name your PDF"
+        visible={Boolean(singlePdfTarget)}
+        onClose={() => setSinglePdfTarget(null)}
+        onSubmit={createSingleImagePdf}
       />
     </SafeAreaView>
   );
