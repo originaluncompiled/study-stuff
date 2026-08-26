@@ -9,6 +9,8 @@ module.exports = {
         'paper-raised': 'rgb(var(--color-paper-raised) / <alpha-value>)',
         purple: 'rgb(var(--color-purple) / <alpha-value>)',
         'purple-dark': 'rgb(var(--color-purple-dark) / <alpha-value>)',
+        'timer-action': 'rgb(var(--color-timer-action) / <alpha-value>)',
+        'timer-action-pressed': 'rgb(var(--color-timer-action-pressed) / <alpha-value>)',
         'on-purple': 'rgb(var(--color-on-purple) / <alpha-value>)',
         'off-white': '#F7F1E3',
         ink: 'rgb(var(--color-ink) / <alpha-value>)',

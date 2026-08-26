@@ -325,7 +325,7 @@ export default function TimerScreen() {
                 accessibilityLabel={buttonLabel}
                 accessibilityRole="button"
                 accessibilityState={{ disabled: startDisabled }}
-                className={`h-16 flex-row items-center justify-center gap-3 rounded-2xl border-2 border-strong-line bg-purple px-5 active:bg-purple-dark ${
+                className={`h-16 flex-row items-center justify-center gap-3 rounded-2xl border-2 border-strong-line bg-timer-action px-5 active:bg-timer-action-pressed ${
                   startDisabled ? 'opacity-50' : ''
                 }`}
                 onPress={handleTimerPress}>
