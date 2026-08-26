@@ -105,6 +105,11 @@ describe('PdfComposerScreen', () => {
   test('reorders whole files and creates a PDF from the selected order', async () => {
     const view = await renderComposer();
 
+    expect(view.queryByText('Build your PDF')).toBeNull();
+    expect(view.getByTestId('pdf-composer-footer').props.style).toEqual({
+      bottom: 98,
+      paddingBottom: 12,
+    });
     await fireEvent(
       view.getByRole('adjustable', { name: 'Reorder Page 2.jpg' }),
       'accessibilityAction',

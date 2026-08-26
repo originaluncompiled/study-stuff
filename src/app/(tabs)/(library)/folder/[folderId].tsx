@@ -458,18 +458,8 @@ export default function FolderScreen() {
         title={actionTarget?.name ?? 'Item options'}
         visible={Boolean(actionTarget)}
         onDismiss={() => setActionTarget(null)}>
-        {actionTarget?.kind === 'image' ? (
-          <ActionRow
-            icon={FileText}
-            label="Convert to PDF"
-            onPress={() => {
-              setConvertTarget(actionTarget);
-              setActionTarget(null);
-            }}
-          />
-        ) : null}
         {actionTarget?.kind === 'pdf' ? (
-          <ActionRow icon={FilePlus2} label="Combine into PDF" onPress={openPdfComposer} />
+          <ActionRow icon={FilePlus2} label="Combine with other files" onPress={openPdfComposer} />
         ) : null}
         <ActionRow
           description={
@@ -490,6 +480,16 @@ export default function FolderScreen() {
             setActionTarget(null);
           }}
         />
+        {actionTarget?.kind === 'image' ? (
+          <ActionRow
+            icon={FileText}
+            label="Convert to PDF"
+            onPress={() => {
+              setConvertTarget(actionTarget);
+              setActionTarget(null);
+            }}
+          />
+        ) : null}
         <ActionRow
           destructive
           icon={Trash2}
@@ -511,7 +511,7 @@ export default function FolderScreen() {
           }}
         />
         <ActionRow
-          description="Choose and reorder images or PDFs from this folder."
+          description="Choose and reorder multiple images or PDFs from this folder."
           icon={FilePlus2}
           label="Multiple files in this folder"
           onPress={openPdfComposer}

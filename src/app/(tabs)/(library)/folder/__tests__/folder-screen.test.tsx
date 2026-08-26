@@ -215,7 +215,7 @@ describe('FolderScreen imports', () => {
 
     await flushFolderLoad();
     await fireEvent.press(view.getByRole('button', { name: 'Manage Notes.pdf' }));
-    await fireEvent.press(view.getByRole('button', { name: 'Combine into PDF' }));
+    await fireEvent.press(view.getByRole('button', { name: 'Combine with other files' }));
 
     expect(mockPush).toHaveBeenCalledWith({
       pathname: '/(tabs)/(library)/pdf-composer',

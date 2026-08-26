@@ -12,6 +12,7 @@ import Sortable, {
 } from 'react-native-sortables';
 
 import { AppText } from '@/components/app-text';
+import { getMainTabBarHeight } from '@/components/main-tab-bar';
 import { NameDialog } from '@/components/name-dialog';
 import { getLibraryFile, listDirectory } from '@/services/library-files';
 import { createLibraryPdf, type PdfSourceFile } from '@/services/pdf-files';
@@ -56,6 +57,7 @@ export default function PdfComposerScreen() {
   const [completed, setCompleted] = useState(0);
 
   const selectedCount = selectedUris.size;
+  const tabBarHeight = getMainTabBarHeight(insets.bottom);
 
   function toggleSource(uri: string) {
     void Haptics.selectionAsync();
@@ -178,18 +180,11 @@ export default function PdfComposerScreen() {
       <Animated.ScrollView
         ref={scrollableRef}
         contentContainerStyle={{
-          paddingBottom: Math.max(insets.bottom, 16) + 104,
+          paddingBottom: tabBarHeight + 88,
           paddingHorizontal: 20,
           paddingTop: 16,
         }}
         showsVerticalScrollIndicator={false}>
-        <View className="mb-5">
-          <AppText variant="title">Build your PDF</AppText>
-          <AppText className="mt-2 max-w-xl" variant="body">
-            Choose files, then drag the handles to set the page order. Each PDF stays together as one block.
-          </AppText>
-        </View>
-
         {initialLoad.error ? (
           <View className="rounded-2xl border border-danger bg-paper-raised px-5 py-4">
             <AppText variant="label" className="text-danger">
@@ -221,8 +216,9 @@ export default function PdfComposerScreen() {
       </Animated.ScrollView>
 
       <View
-        className="absolute inset-x-0 bottom-0 border-t border-line bg-paper px-5 pt-3"
-        style={{ paddingBottom: Math.max(insets.bottom, 12) }}>
+        className="absolute inset-x-0 bg-paper px-5 pt-3"
+        style={{ bottom: tabBarHeight, paddingBottom: 12 }}
+        testID="pdf-composer-footer">
         <View className="mx-auto w-full max-w-xl flex-row items-center gap-4">
           <AppText variant="caption" className="flex-1">
             {selectedCount} {selectedCount === 1 ? 'file' : 'files'} selected
