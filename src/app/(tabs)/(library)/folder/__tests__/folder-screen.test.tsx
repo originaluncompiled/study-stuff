@@ -1,4 +1,5 @@
 import { act, fireEvent, render, waitFor } from '@testing-library/react-native';
+import { Alert } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import FolderScreen from '@/app/(tabs)/(library)/folder/[folderId]';
@@ -9,15 +10,25 @@ const mockTakeAndCopyPhoto = jest.fn(async (_folderId: string, _path?: string) =
 const mockTouchFolder = jest.fn(async () => undefined);
 const mockListDirectory = jest.fn();
 const mockPush = jest.fn();
+const mockDeleteEntry = jest.fn(
+  (_folderId: string, _relativePath: string, _kind: string) => undefined,
+);
+const mockWriteFavouritePaths = jest.fn(
+  async (_folderId: string, _paths: Set<string>) => undefined,
+);
 const mockCreateLibraryPdf = jest.fn(async (_options: unknown) => ({
   name: 'Scan.pdf',
   uri: 'file://Scan.pdf',
 }));
+let mockFavouritePaths = new Set<string>();
+let mockStackOptions: { headerRight?: () => React.ReactNode; title?: string } | null = null;
 
 jest.mock('expo-router', () => ({
   Stack: {
-    Screen: ({ options }: { options: { headerRight?: () => React.ReactNode } }) =>
-      options.headerRight?.() ?? null,
+    Screen: ({ options }: { options: { headerRight?: () => React.ReactNode; title?: string } }) => {
+      mockStackOptions = options;
+      return options.headerRight?.() ?? null;
+    },
   },
   useLocalSearchParams: () => ({ folderId: 'folder-1', path: 'Chapter 1' }),
   useFocusEffect: (callback: () => void | (() => void)) => {
@@ -34,16 +45,19 @@ jest.mock('expo-haptics', () => ({
 }));
 
 jest.mock('@/services/library-favourites', () => ({
-  readFavouritePaths: async () => new Set<string>(),
+  readFavouritePaths: async () => new Set(mockFavouritePaths),
   remapFavouritePaths: jest.fn(),
-  removeFavouritePaths: jest.fn(),
-  writeFavouritePaths: jest.fn(async () => undefined),
+  removeFavouritePaths: (paths: Set<string>, removedPath: string) =>
+    new Set(Array.from(paths).filter((path) => path !== removedPath)),
+  writeFavouritePaths: (folderId: string, paths: Set<string>) =>
+    mockWriteFavouritePaths(folderId, paths),
 }));
 
 jest.mock('@/services/library-files', () => ({
   createSubfolder: jest.fn(),
   createTextFile: jest.fn(),
-  deleteEntry: jest.fn(),
+  deleteEntry: (folderId: string, relativePath: string, kind: string) =>
+    mockDeleteEntry(folderId, relativePath, kind),
   getLibraryFile: (_folderId: string, path: string) => ({ uri: `file://${path}` }),
   listDirectory: () => mockListDirectory(),
   pickAndCopyFiles: (folderId: string, path?: string) => mockPickAndCopyFiles(folderId, path),
@@ -95,6 +109,8 @@ describe('FolderScreen imports', () => {
   beforeEach(() => {
     jest.useFakeTimers();
     jest.clearAllMocks();
+    mockFavouritePaths = new Set();
+    mockStackOptions = null;
     mockListDirectory.mockReturnValue([]);
   });
 
@@ -162,7 +178,11 @@ describe('FolderScreen imports', () => {
     await fireEvent.press(view.getByRole('button', { name: /^Multiple files in this folder/ }));
     expect(mockPush).toHaveBeenCalledWith({
       pathname: '/(tabs)/(library)/pdf-composer',
-      params: { folderId: 'folder-1', path: 'Chapter 1' },
+      params: {
+        folderId: 'folder-1',
+        path: 'Chapter 1',
+        selectedPaths: JSON.stringify(['Chapter 1/Scan.jpg']),
+      },
     });
   });
 
@@ -215,11 +235,140 @@ describe('FolderScreen imports', () => {
 
     await flushFolderLoad();
     await fireEvent.press(view.getByRole('button', { name: 'Manage Notes.pdf' }));
-    await fireEvent.press(view.getByRole('button', { name: 'Combine with other files' }));
+    await fireEvent.press(view.getByRole('button', { name: 'Combine with other PDFs' }));
 
     expect(mockPush).toHaveBeenCalledWith({
       pathname: '/(tabs)/(library)/pdf-composer',
-      params: { folderId: 'folder-1', path: 'Chapter 1' },
+      params: {
+        folderId: 'folder-1',
+        path: 'Chapter 1',
+        selectedPaths: JSON.stringify(['Chapter 1/Notes.pdf']),
+      },
     });
+  });
+
+  test('long press selects rows without changing favourite-first ordering', async () => {
+    mockFavouritePaths = new Set(['Chapter 1/Notes.pdf']);
+    mockListDirectory.mockReturnValue([
+      {
+        childCount: null,
+        kind: 'image',
+        name: 'Diagram.jpg',
+        relativePath: 'Chapter 1/Diagram.jpg',
+        size: 2048,
+      },
+      {
+        childCount: null,
+        kind: 'pdf',
+        name: 'Notes.pdf',
+        relativePath: 'Chapter 1/Notes.pdf',
+        size: 4096,
+      },
+    ]);
+    const view = await renderFolder();
+
+    await flushFolderLoad();
+    await fireEvent(
+      view.getByRole('button', { name: 'Open Notes.pdf, Favourited' }),
+      'longPress',
+    );
+
+    expect(mockStackOptions?.title).toBe('1 Selected');
+    expect(
+      view.getAllByRole('checkbox').map((checkbox) => checkbox.props.accessibilityLabel),
+    ).toEqual(['Deselect Notes.pdf', 'Select Diagram.jpg']);
+    expect(view.queryByRole('button', { name: 'Manage Notes.pdf' })).toBeNull();
+
+    await fireEvent.press(view.getByRole('checkbox', { name: 'Select Diagram.jpg' }));
+    expect(mockStackOptions?.title).toBe('2 Selected');
+    await fireEvent.press(view.getByRole('button', { name: 'Selected item actions' }));
+    expect(view.getByRole('button', { name: 'Favourite' })).toBeTruthy();
+    expect(view.getByRole('button', { name: 'Unfavourite' })).toBeTruthy();
+    expect(view.getByRole('button', { name: 'Delete' })).toBeTruthy();
+    await fireEvent.press(view.getByRole('button', { name: 'Combine into PDF' }));
+
+    expect(mockPush).toHaveBeenCalledWith({
+      pathname: '/(tabs)/(library)/pdf-composer',
+      params: {
+        folderId: 'folder-1',
+        path: 'Chapter 1',
+        selectedPaths: JSON.stringify([
+          'Chapter 1/Notes.pdf',
+          'Chapter 1/Diagram.jpg',
+        ]),
+      },
+    });
+  });
+
+  test('bulk favourites and unfavourites selected items', async () => {
+    mockListDirectory.mockReturnValue([
+      {
+        childCount: null,
+        kind: 'text',
+        name: 'Notes.txt',
+        relativePath: 'Chapter 1/Notes.txt',
+        size: 2048,
+      },
+    ]);
+    const view = await renderFolder();
+
+    await flushFolderLoad();
+    await fireEvent(view.getByRole('button', { name: 'Open Notes.txt' }), 'longPress');
+    await fireEvent.press(view.getByRole('button', { name: 'Selected item actions' }));
+    await fireEvent.press(view.getByRole('button', { name: 'Favourite' }));
+    await waitFor(() => expect(mockWriteFavouritePaths).toHaveBeenCalledTimes(1));
+    expect(Array.from(mockWriteFavouritePaths.mock.calls[0][1])).toEqual([
+      'Chapter 1/Notes.txt',
+    ]);
+    expect(mockStackOptions?.title).toBe('Chapter 1');
+
+    await fireEvent(
+      view.getByRole('button', { name: 'Open Notes.txt, Favourited' }),
+      'longPress',
+    );
+    await fireEvent.press(view.getByRole('button', { name: 'Selected item actions' }));
+    await fireEvent.press(view.getByRole('button', { name: 'Unfavourite' }));
+    await waitFor(() => expect(mockWriteFavouritePaths).toHaveBeenCalledTimes(2));
+    expect(Array.from(mockWriteFavouritePaths.mock.calls[1][1])).toEqual([]);
+  });
+
+  test('rejects incompatible PDF selections and confirms bulk deletion', async () => {
+    mockListDirectory.mockReturnValue([
+      {
+        childCount: 2,
+        kind: 'directory',
+        name: 'References',
+        relativePath: 'Chapter 1/References',
+        size: null,
+      },
+    ]);
+    const alertSpy = jest.spyOn(Alert, 'alert');
+    const view = await renderFolder();
+
+    await flushFolderLoad();
+    await fireEvent(
+      view.getByRole('button', { name: 'Open References, 2 items' }),
+      'longPress',
+    );
+    await fireEvent.press(view.getByRole('button', { name: 'Selected item actions' }));
+    await fireEvent.press(view.getByRole('button', { name: 'Combine into PDF' }));
+    expect(alertSpy).toHaveBeenCalledWith(
+      'Some items cannot be combined',
+      'Select only images and PDFs to create a combined PDF.',
+    );
+    expect(mockPush).not.toHaveBeenCalled();
+
+    await fireEvent.press(view.getByRole('button', { name: 'Selected item actions' }));
+    await fireEvent.press(view.getByRole('button', { name: 'Delete' }));
+    const confirmationButtons = alertSpy.mock.calls.at(-1)?.[2];
+    const destructiveAction = confirmationButtons?.find((button) => button.style === 'destructive');
+    await act(async () => destructiveAction?.onPress?.());
+
+    expect(mockDeleteEntry).toHaveBeenCalledWith(
+      'folder-1',
+      'Chapter 1/References',
+      'directory',
+    );
+    alertSpy.mockRestore();
   });
 });

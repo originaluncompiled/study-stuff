@@ -9,6 +9,7 @@ const mockCreateLibraryPdf = jest.fn(async (_options: unknown) => ({
   name: 'Study pack.pdf',
   uri: 'file:///library/Study pack.pdf',
 }));
+let mockSelectedPaths = JSON.stringify(['Chapter 1/Page 10.pdf']);
 const mockEntries = [
   {
     childCount: null,
@@ -28,7 +29,11 @@ const mockEntries = [
 
 jest.mock('expo-router', () => ({
   Stack: { Screen: () => null },
-  useLocalSearchParams: () => ({ folderId: 'folder-1', path: 'Chapter 1' }),
+  useLocalSearchParams: () => ({
+    folderId: 'folder-1',
+    path: 'Chapter 1',
+    selectedPaths: mockSelectedPaths,
+  }),
   useRouter: () => ({ back: mockBack }),
 }));
 
@@ -100,6 +105,7 @@ function renderComposer() {
 describe('PdfComposerScreen', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockSelectedPaths = JSON.stringify(['Chapter 1/Page 10.pdf']);
   });
 
   test('reorders whole files and creates a PDF from the selected order', async () => {
@@ -107,9 +113,11 @@ describe('PdfComposerScreen', () => {
 
     expect(view.queryByText('Build your PDF')).toBeNull();
     expect(view.getByTestId('pdf-composer-footer').props.style).toEqual({
-      bottom: 98,
-      paddingBottom: 12,
+      bottom: 0,
+      paddingBottom: 110,
     });
+    expect(view.getByText('1 file selected')).toBeTruthy();
+    await fireEvent.press(view.getByRole('checkbox', { name: 'Add Page 2.jpg' }));
     await fireEvent(
       view.getByRole('adjustable', { name: 'Reorder Page 2.jpg' }),
       'accessibilityAction',
@@ -143,10 +151,9 @@ describe('PdfComposerScreen', () => {
     expect(mockBack).toHaveBeenCalled();
   });
 
-  test('excludes unchecked files', async () => {
+  test('starts with only the initiating file selected', async () => {
     const view = await renderComposer();
 
-    await fireEvent.press(view.getByRole('checkbox', { name: 'Remove Page 10.pdf' }));
     expect(view.getByText('1 file selected')).toBeTruthy();
     await fireEvent.press(view.getByRole('button', { name: 'Create PDF' }));
     await fireEvent.press(view.getAllByRole('button', { name: 'Create PDF' }).at(-1)!);
@@ -156,13 +163,25 @@ describe('PdfComposerScreen', () => {
         expect.objectContaining({
           sources: [
             {
-              kind: 'image',
-              name: 'Page 2.jpg',
-              uri: 'file://Chapter 1/Page 2.jpg',
+              kind: 'pdf',
+              name: 'Page 10.pdf',
+              uri: 'file://Chapter 1/Page 10.pdf',
             },
           ],
         }),
       ),
     );
+  });
+
+  test('checks every file passed from a multi-selection', async () => {
+    mockSelectedPaths = JSON.stringify([
+      'Chapter 1/Page 2.jpg',
+      'Chapter 1/Page 10.pdf',
+    ]);
+    const view = await renderComposer();
+
+    expect(view.getByText('2 files selected')).toBeTruthy();
+    expect(view.getByRole('checkbox', { name: 'Remove Page 2.jpg' })).toBeTruthy();
+    expect(view.getByRole('checkbox', { name: 'Remove Page 10.pdf' })).toBeTruthy();
   });
 });

@@ -2,9 +2,14 @@ import type { ReactNode } from 'react';
 import { act, fireEvent, render, waitFor } from '@testing-library/react-native';
 
 import ImageScreen from '@/app/image/[folderId]';
+import { colors } from '@/constants/theme';
 
 const mockGoToIndex = jest.fn();
-let mockViewerProps: { initialIndex: number; ListComponent?: unknown } | null = null;
+let mockViewerProps: {
+  backdropStyle?: { backgroundColor?: string };
+  initialIndex: number;
+  ListComponent?: unknown;
+} | null = null;
 let mockZoomHandler: ((event: { scale: number }) => void) | null = null;
 
 jest.mock('expo-router', () => ({
@@ -128,8 +133,14 @@ describe('ImageScreen', () => {
 
     expect(mockViewerProps?.initialIndex).toBe(1);
     expect(mockViewerProps?.ListComponent).toBeUndefined();
+    expect(mockViewerProps?.backdropStyle).toEqual({ backgroundColor: colors.viewerCanvas });
     expect(view.getByText('Page 10.jpg')).toBeTruthy();
     expect(view.getByText('2 / 2')).toBeTruthy();
+    expect(view.getByTestId('image-footer').props.className).not.toContain('bg-viewer');
+    expect(view.getByRole('adjustable', { name: 'Image 2 of 2' }).props.className).toContain(
+      'bg-white/45',
+    );
+    expect(view.getByText('2 / 2').props.className).toContain('text-viewer');
     expect(view.getAllByRole('button')).toHaveLength(2);
     expect(view.getByLabelText('Image 2 of 2, Page 10.jpg')).toHaveStyle({
       bottom: 8,

@@ -106,7 +106,7 @@ export default function ImageScreen() {
   }
 
   return (
-    <View className="flex-1 bg-viewer">
+    <View className="flex-1 bg-viewer-canvas">
       {!resolution ? (
         <View className="flex-1 items-center justify-center">
           <ActivityIndicator color={colors.purple} size="large" />
@@ -129,7 +129,7 @@ export default function ImageScreen() {
 
       {images.length > 0 ? (
         <GestureViewer
-          backdropStyle={{ backgroundColor: colors.viewer }}
+          backdropStyle={{ backgroundColor: colors.viewerCanvas }}
           containerStyle={{ flex: 1 }}
           data={images}
           dismiss={{ enabled: false }}
@@ -140,7 +140,7 @@ export default function ImageScreen() {
           renderItem={(item, index, { isActive }) => (
             <View
               accessibilityElementsHidden={!isActive}
-              className="h-full w-full items-center justify-center bg-viewer"
+              className="h-full w-full items-center justify-center bg-viewer-canvas"
               importantForAccessibility={isActive ? 'auto' : 'no-hide-descendants'}>
               {failedPaths.has(item.relativePath) ? (
                 <View className="items-center px-8">
@@ -171,7 +171,7 @@ export default function ImageScreen() {
           accessibilityElementsHidden={!headerVisible}
           importantForAccessibility={headerVisible ? 'auto' : 'no-hide-descendants'}
           pointerEvents={headerVisible ? 'auto' : 'none'}
-          className="absolute bottom-0 left-0 right-0 z-30 bg-viewer/95 pt-2"
+          className="absolute bottom-0 left-0 right-0 z-30 pt-2"
           style={[
             { paddingBottom: Math.max(chrome.insets.bottom, 10) },
             footerAnimatedStyle,
@@ -189,14 +189,14 @@ export default function ImageScreen() {
               now: currentIndex + 1,
               text: `${currentIndex + 1} of ${images.length}`,
             }}
-            className="mb-2 items-center"
+            className="mb-2 self-center rounded-lg bg-white/45 px-2 py-1"
             onAccessibilityAction={(event) => {
               const action = event.nativeEvent.actionName;
               if (action === 'increment' || action === 'decrement') {
                 adjustImage(action);
               }
             }}>
-            <AppText variant="label" className="text-viewer-foreground">
+            <AppText variant="label" className="text-viewer">
               {currentIndex + 1} / {images.length}
             </AppText>
           </View>

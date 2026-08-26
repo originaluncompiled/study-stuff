@@ -89,6 +89,7 @@ describe('PdfScreen', () => {
       width: Dimensions.get('window').width,
     });
     expect(pdf.props.style).toMatchObject({ flex: 1 });
+    expect(pdf.props.style.backgroundColor).toBe(colors.viewerCanvas);
 
     await act(async () => {
       pdf.props.onPageChanged(2);

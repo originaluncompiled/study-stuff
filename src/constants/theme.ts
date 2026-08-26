@@ -20,6 +20,7 @@ export const colors = {
   danger: '#B42318',
   surfacePressed: '#EEE4CF',
   viewer: '#141116',
+  viewerCanvas: '#2B272D',
   viewerForeground: '#F7F1E3',
   viewerMuted: '#D8CEBE',
   folderRed: '#D9554D',

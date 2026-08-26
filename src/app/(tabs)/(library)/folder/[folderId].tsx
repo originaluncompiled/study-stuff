@@ -7,6 +7,7 @@ import {
   FileText,
   FolderPlus,
   Image,
+  MoreHorizontal,
   Pencil,
   Plus,
   Star,
@@ -69,6 +70,8 @@ export default function FolderScreen() {
   const [renameTarget, setRenameTarget] = useState<LibraryEntry | null>(null);
   const [convertTarget, setConvertTarget] = useState<LibraryEntry | null>(null);
   const [singlePdfTarget, setSinglePdfTarget] = useState<LibraryEntry | null>(null);
+  const [selectedPaths, setSelectedPaths] = useState<Set<string>>(new Set());
+  const [selectionSheetVisible, setSelectionSheetVisible] = useState(false);
 
   let currentPath = '';
   let pathError: string | null = null;
@@ -87,6 +90,9 @@ export default function FolderScreen() {
   const actionTargetType = actionTarget?.kind === 'directory' ? 'folder' : 'file';
   const breadcrumbSegments =
     folder && pathSegments.length > 0 ? [folder.name, ...pathSegments.slice(0, -1)] : [];
+  const orderedEntries = orderLibraryEntries(entries, favouritePaths);
+  const selectedEntries = orderedEntries.filter((entry) => selectedPaths.has(entry.relativePath));
+  const selectionMode = selectedPaths.size > 0;
 
   useFocusEffect(
     useCallback(() => {
@@ -197,13 +203,110 @@ export default function FolderScreen() {
     router.push({ pathname, params: { folderId, path: entry.relativePath } });
   }
 
-  function openPdfComposer() {
+  function openPdfComposer(initialFiles: LibraryEntry[]) {
     setActionTarget(null);
     setConvertTarget(null);
     router.push({
       pathname: '/(tabs)/(library)/pdf-composer',
-      params: { folderId, path: currentPath },
+      params: {
+        folderId,
+        path: currentPath,
+        selectedPaths: JSON.stringify(initialFiles.map((entry) => entry.relativePath)),
+      },
     });
+  }
+
+  function beginSelection(entry: LibraryEntry) {
+    setSelectedPaths((current) => new Set(current).add(entry.relativePath));
+    void Haptics.selectionAsync();
+  }
+
+  function toggleSelection(entry: LibraryEntry) {
+    setSelectedPaths((current) => {
+      const next = new Set(current);
+      if (next.has(entry.relativePath)) {
+        next.delete(entry.relativePath);
+      } else {
+        next.add(entry.relativePath);
+      }
+      return next;
+    });
+    void Haptics.selectionAsync();
+  }
+
+  async function setSelectedFavouriteState(favourite: boolean) {
+    setSelectionSheetVisible(false);
+    const previous = favouritePaths;
+    const next = new Set(previous);
+    selectedEntries.forEach((entry) => {
+      if (favourite) {
+        next.add(entry.relativePath);
+      } else {
+        next.delete(entry.relativePath);
+      }
+    });
+
+    setFavouritePaths(next);
+    try {
+      await writeFavouritePaths(folderId, next);
+      setSelectedPaths(new Set());
+      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    } catch (error) {
+      setFavouritePaths(previous);
+      Alert.alert('Could not update favourites', getErrorMessage(error));
+    }
+  }
+
+  function combineSelectedEntries() {
+    setSelectionSheetVisible(false);
+    const incompatible = selectedEntries.filter(
+      (entry) => entry.kind !== 'image' && entry.kind !== 'pdf',
+    );
+    if (incompatible.length > 0) {
+      Alert.alert(
+        'Some items cannot be combined',
+        'Select only images and PDFs to create a combined PDF.',
+      );
+      return;
+    }
+
+    setSelectedPaths(new Set());
+    openPdfComposer(selectedEntries);
+  }
+
+  function confirmDeleteSelected() {
+    const targets = selectedEntries;
+    setSelectionSheetVisible(false);
+    Alert.alert(
+      `Delete ${targets.length} selected ${targets.length === 1 ? 'item' : 'items'}?`,
+      'This permanently removes the selected items and everything inside selected folders.',
+      [
+        { style: 'cancel', text: 'Cancel' },
+        {
+          style: 'destructive',
+          text: 'Delete',
+          onPress: () => {
+            try {
+              let nextFavourites = favouritePaths;
+              targets.forEach((entry) => {
+                deleteEntry(folderId, entry.relativePath, entry.kind);
+                nextFavourites = removeFavouritePaths(nextFavourites, entry.relativePath);
+              });
+              setFavouritePaths(nextFavourites);
+              setSelectedPaths(new Set());
+              void writeFavouritePaths(folderId, nextFavourites).catch((error) => {
+                Alert.alert('Could not update favourites', getErrorMessage(error));
+              });
+              setRevision((current) => current + 1);
+              void touchFolder(folderId).catch(() => undefined);
+              void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            } catch (error) {
+              Alert.alert('Could not delete selected items', getErrorMessage(error));
+            }
+          },
+        },
+      ],
+    );
   }
 
   async function createSingleImagePdf(name: string) {
@@ -307,17 +410,25 @@ export default function FolderScreen() {
     <SafeAreaView className="flex-1 bg-paper" edges={['left', 'right']}>
       <Stack.Screen
         options={{
-          title,
+          title: selectionMode ? `${selectedPaths.size} Selected` : title,
           headerRight: () => (
             <Pressable
-              accessibilityLabel="Add to folder"
+              accessibilityLabel={selectionMode ? 'Selected item actions' : 'Add to folder'}
               accessibilityRole="button"
-              accessibilityState={{ busy: addingFiles, disabled: addingFiles }}
+              accessibilityState={
+                selectionMode
+                  ? { expanded: selectionSheetVisible }
+                  : { busy: addingFiles, disabled: addingFiles }
+              }
               className="h-11 w-11 items-center justify-center rounded-full active:bg-line/50"
-              disabled={addingFiles}
+              disabled={!selectionMode && addingFiles}
               hitSlop={8}
-              onPress={() => setAddSheetVisible(true)}>
-              {addingFiles ? (
+              onPress={() =>
+                selectionMode ? setSelectionSheetVisible(true) : setAddSheetVisible(true)
+              }>
+              {selectionMode ? (
+                <MoreHorizontal color={colors.ink} size={25} />
+              ) : addingFiles ? (
                 <ActivityIndicator color={colors.purple} />
               ) : (
                 <Plus color={colors.ink} size={25} />
@@ -343,7 +454,7 @@ export default function FolderScreen() {
           </View>
         ) : (
           <FlatList
-            data={orderLibraryEntries(entries, favouritePaths)}
+            data={orderedEntries}
             keyExtractor={(entry) => entry.relativePath}
             contentContainerStyle={{
               flexGrow: 1,
@@ -389,8 +500,11 @@ export default function FolderScreen() {
               <EntryRow
                 entry={item}
                 favourite={favouritePaths.has(item.relativePath)}
+                selected={selectedPaths.has(item.relativePath)}
+                selecting={selectionMode}
+                onLongPress={() => beginSelection(item)}
                 onMenu={() => setActionTarget(item)}
-                onPress={() => openEntry(item)}
+                onPress={() => (selectionMode ? toggleSelection(item) : openEntry(item))}
               />
             )}
           />
@@ -455,12 +569,32 @@ export default function FolderScreen() {
       </ActionSheet>
 
       <ActionSheet
+        title={`${selectedPaths.size} Selected`}
+        visible={selectionSheetVisible}
+        onDismiss={() => setSelectionSheetVisible(false)}>
+        <ActionRow
+          icon={Star}
+          label="Favourite"
+          onPress={() => void setSelectedFavouriteState(true)}
+        />
+        <ActionRow
+          icon={Star}
+          label="Unfavourite"
+          onPress={() => void setSelectedFavouriteState(false)}
+        />
+        <ActionRow icon={FilePlus2} label="Combine into PDF" onPress={combineSelectedEntries} />
+        <ActionRow
+          destructive
+          icon={Trash2}
+          label="Delete"
+          onPress={confirmDeleteSelected}
+        />
+      </ActionSheet>
+
+      <ActionSheet
         title={actionTarget?.name ?? 'Item options'}
         visible={Boolean(actionTarget)}
         onDismiss={() => setActionTarget(null)}>
-        {actionTarget?.kind === 'pdf' ? (
-          <ActionRow icon={FilePlus2} label="Combine with other files" onPress={openPdfComposer} />
-        ) : null}
         <ActionRow
           description={
             actionTargetIsFavourite
@@ -480,6 +614,13 @@ export default function FolderScreen() {
             setActionTarget(null);
           }}
         />
+        {actionTarget?.kind === 'pdf' ? (
+          <ActionRow
+            icon={FilePlus2}
+            label="Combine with other PDFs"
+            onPress={() => openPdfComposer([actionTarget])}
+          />
+        ) : null}
         {actionTarget?.kind === 'image' ? (
           <ActionRow
             icon={FileText}
@@ -514,7 +655,7 @@ export default function FolderScreen() {
           description="Choose and reorder multiple images or PDFs from this folder."
           icon={FilePlus2}
           label="Multiple files in this folder"
-          onPress={openPdfComposer}
+          onPress={() => openPdfComposer(convertTarget ? [convertTarget] : [])}
         />
       </ActionSheet>
 

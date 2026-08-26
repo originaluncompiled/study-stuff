@@ -1,4 +1,12 @@
-import { File, FileText, Folder, Image as ImageIcon, MoreHorizontal, Star } from 'lucide-react-native';
+import {
+  Check,
+  File,
+  FileText,
+  Folder,
+  Image as ImageIcon,
+  MoreHorizontal,
+  Star,
+} from 'lucide-react-native';
 import { useState } from 'react';
 import { Pressable, View } from 'react-native';
 
@@ -9,13 +17,19 @@ import type { LibraryEntry } from '@/types/library';
 export function EntryRow({
   entry,
   favourite,
+  onLongPress,
   onMenu,
   onPress,
+  selected = false,
+  selecting = false,
 }: {
   entry: LibraryEntry;
   favourite: boolean;
+  onLongPress?: () => void;
   onMenu: () => void;
   onPress: () => void;
+  selected?: boolean;
+  selecting?: boolean;
 }) {
   const colors = useThemeColors();
   const [pressed, setPressed] = useState(false);
@@ -31,16 +45,30 @@ export function EntryRow({
     : formatFileSize(entry.size, entry.kind as Exclude<LibraryEntry['kind'], 'directory'>);
   return (
     <View
-      className="mb-3 flex-row items-stretch overflow-hidden rounded-[22px] border-2 border-strong-line"
+      className={`mb-3 flex-row items-stretch overflow-hidden rounded-[22px] border-2 ${selecting && selected ? 'border-purple' : 'border-strong-line'}`}
       style={{ backgroundColor: pressed ? colors.surfacePressed : colors.paperRaised }}>
       <Pressable
-        accessibilityLabel={`Open ${entry.name}${favourite ? ', Favourited' : ''}${isDirectory && entry.childCount !== null ? `, ${detail}` : ''}`}
-        accessibilityRole="button"
+        accessibilityHint={selecting ? undefined : 'Long press to select'}
+        accessibilityLabel={
+          selecting
+            ? `${selected ? 'Deselect' : 'Select'} ${entry.name}`
+            : `Open ${entry.name}${favourite ? ', Favourited' : ''}${isDirectory && entry.childCount !== null ? `, ${detail}` : ''}`
+        }
+        accessibilityRole={selecting ? 'checkbox' : 'button'}
+        accessibilityState={selecting ? { checked: selected } : undefined}
         className="min-h-[80px] flex-1 flex-row items-center px-4 py-3"
+        onLongPress={onLongPress}
         onPress={onPress}
         onPressIn={() => setPressed(true)}
         onPressOut={() => setPressed(false)}>
-        {favourite ? (
+        {selecting ? (
+          <View
+            accessible={false}
+            className={`mr-3 h-7 w-7 items-center justify-center rounded-lg border-2 ${selected ? 'border-purple bg-purple' : 'border-ink bg-paper-raised'}`}
+            testID={`selection-checkbox-${entry.relativePath}`}>
+            {selected ? <Check color={colors.onPurple} size={18} strokeWidth={3} /> : null}
+          </View>
+        ) : favourite ? (
           <View accessible={false} className="mr-2 items-center justify-center">
             <Star color={colors.purple} fill={colors.purple} size={20} />
           </View>
@@ -77,25 +105,27 @@ export function EntryRow({
           </AppText>
         </View>
       </Pressable>
-      <View className="w-14 items-center justify-center">
-        <Pressable
-          accessibilityLabel={`Manage ${entry.name}`}
-          accessibilityRole="button"
-          hitSlop={6}
-          onPress={onMenu}
-          onPressIn={() => setMenuPressed(true)}
-          onPressOut={() => setMenuPressed(false)}
-          style={{
-            alignItems: 'center',
-            backgroundColor: menuPressed ? colors.surfacePressed : 'transparent',
-            borderRadius: 22,
-            height: 44,
-            justifyContent: 'center',
-            width: 44,
-          }}>
-          <MoreHorizontal color={colors.ink} size={23} />
-        </Pressable>
-      </View>
+      {!selecting ? (
+        <View className="w-14 items-center justify-center">
+          <Pressable
+            accessibilityLabel={`Manage ${entry.name}`}
+            accessibilityRole="button"
+            hitSlop={6}
+            onPress={onMenu}
+            onPressIn={() => setMenuPressed(true)}
+            onPressOut={() => setMenuPressed(false)}
+            style={{
+              alignItems: 'center',
+              backgroundColor: menuPressed ? colors.surfacePressed : 'transparent',
+              borderRadius: 22,
+              height: 44,
+              justifyContent: 'center',
+              width: 44,
+            }}>
+            <MoreHorizontal color={colors.ink} size={23} />
+          </Pressable>
+        </View>
+      ) : null}
     </View>
   );
 }

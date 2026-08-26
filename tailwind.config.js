@@ -23,6 +23,7 @@ module.exports = {
         danger: 'rgb(var(--color-danger) / <alpha-value>)',
         'surface-pressed': 'rgb(var(--color-surface-pressed) / <alpha-value>)',
         viewer: '#141116',
+        'viewer-canvas': '#2B272D',
         'viewer-foreground': '#F7F1E3',
         'viewer-muted': '#D8CEBE',
         'folder-red': '#D9554D',

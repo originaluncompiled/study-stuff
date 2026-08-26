@@ -1,4 +1,4 @@
-import { render } from '@testing-library/react-native';
+import { fireEvent, render } from '@testing-library/react-native';
 
 import { EntryRow } from '@/components/entry-row';
 import type { LibraryEntry } from '@/types/library';
@@ -96,5 +96,46 @@ describe('EntryRow', () => {
     const view = await renderEntry(entry, true);
 
     expect(view.getByRole('button', { name: 'Open Notes.pdf, Favourited' })).toBeTruthy();
+  });
+
+  test('enters selection from a long press and replaces row actions with a checkbox', async () => {
+    const entry: LibraryEntry = {
+      childCount: null,
+      kind: 'pdf',
+      name: 'Notes.pdf',
+      relativePath: 'Notes.pdf',
+      size: 2048,
+    };
+    const onLongPress = jest.fn();
+    const normalView = await render(
+      <EntryRow
+        entry={entry}
+        favourite
+        onLongPress={onLongPress}
+        onMenu={jest.fn()}
+        onPress={jest.fn()}
+      />,
+    );
+
+    await fireEvent(normalView.getByRole('button', { name: 'Open Notes.pdf, Favourited' }), 'longPress');
+    expect(onLongPress).toHaveBeenCalled();
+    await normalView.unmount();
+
+    const selectedView = await render(
+      <EntryRow
+        entry={entry}
+        favourite
+        selected
+        selecting
+        onMenu={jest.fn()}
+        onPress={jest.fn()}
+      />,
+    );
+
+    expect(selectedView.getByRole('checkbox', { name: 'Deselect Notes.pdf' })).toBeTruthy();
+    expect(selectedView.getByTestId('selection-checkbox-Notes.pdf').props.className).toContain(
+      'bg-purple',
+    );
+    expect(selectedView.queryByRole('button', { name: 'Manage Notes.pdf' })).toBeNull();
   });
 });

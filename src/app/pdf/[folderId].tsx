@@ -297,7 +297,7 @@ export default function PdfScreen() {
     });
 
   return (
-    <View className="flex-1 bg-viewer">
+    <View className="flex-1 bg-viewer-canvas">
       {error ? (
         <View className="flex-1 items-center justify-center px-7">
           <View className="h-20 w-20 items-center justify-center rounded-[26px] bg-purple">
@@ -313,7 +313,7 @@ export default function PdfScreen() {
       ) : null}
 
       {!resolution ? (
-        <View className="flex-1 items-center justify-center bg-viewer">
+        <View className="flex-1 items-center justify-center bg-viewer-canvas">
           <ActivityIndicator color={colors.purple} size="large" />
         </View>
       ) : null}
@@ -361,13 +361,13 @@ export default function PdfScreen() {
               style={{
                 flex: 1,
                 width: '100%',
-                backgroundColor: colors.viewer,
+                backgroundColor: colors.viewerCanvas,
               }}
               trustAllCerts={false}
             />
           </Animated.View>
           {loading ? (
-            <View className="absolute inset-0 items-center justify-center bg-viewer">
+            <View className="absolute inset-0 items-center justify-center bg-viewer-canvas">
               <ActivityIndicator color={colors.purple} size="large" />
               <AppText variant="caption" className="mt-4 text-viewer-muted">
                 Opening PDF…

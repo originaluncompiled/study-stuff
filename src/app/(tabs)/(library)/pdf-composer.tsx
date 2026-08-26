@@ -19,13 +19,16 @@ import { createLibraryPdf, type PdfSourceFile } from '@/services/pdf-files';
 import { useLibraryStore } from '@/store/library-store';
 import { useThemeColors } from '@/store/theme-store';
 
-function loadSources(folderId: string, path?: string): PdfSourceFile[] {
+type ComposerSource = PdfSourceFile & { relativePath: string };
+
+function loadSources(folderId: string, path?: string): ComposerSource[] {
   return listDirectory(folderId, path).flatMap((entry) =>
     entry.kind === 'image' || entry.kind === 'pdf'
       ? [
           {
             kind: entry.kind,
             name: entry.name,
+            relativePath: entry.relativePath,
             uri: getLibraryFile(folderId, entry.relativePath).uri,
           },
         ]
@@ -33,12 +36,30 @@ function loadSources(folderId: string, path?: string): PdfSourceFile[] {
   );
 }
 
+function parseSelectedPaths(value: string | undefined): Set<string> {
+  if (!value) {
+    return new Set();
+  }
+  try {
+    const parsed: unknown = JSON.parse(value);
+    return Array.isArray(parsed) && parsed.every((path) => typeof path === 'string')
+      ? new Set(parsed)
+      : new Set();
+  } catch {
+    return new Set();
+  }
+}
+
 function getErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : 'This folder could not be read.';
 }
 
 export default function PdfComposerScreen() {
-  const { folderId, path } = useLocalSearchParams<{ folderId: string; path?: string }>();
+  const { folderId, path, selectedPaths } = useLocalSearchParams<{
+    folderId: string;
+    path?: string;
+    selectedPaths?: string;
+  }>();
   const router = useRouter();
   const colors = useThemeColors();
   const insets = useSafeAreaInsets();
@@ -48,11 +69,16 @@ export default function PdfComposerScreen() {
     try {
       return { error: null, sources: loadSources(folderId, path) };
     } catch (error) {
-      return { error: getErrorMessage(error), sources: [] as PdfSourceFile[] };
+      return { error: getErrorMessage(error), sources: [] as ComposerSource[] };
     }
   });
   const [sources, setSources] = useState(initialLoad.sources);
-  const [selectedUris, setSelectedUris] = useState(() => new Set(sources.map((source) => source.uri)));
+  const [selectedUris, setSelectedUris] = useState(() => {
+    const initialPaths = parseSelectedPaths(selectedPaths);
+    return new Set(
+      sources.flatMap((source) => (initialPaths.has(source.relativePath) ? [source.uri] : [])),
+    );
+  });
   const [nameDialogVisible, setNameDialogVisible] = useState(false);
   const [completed, setCompleted] = useState(0);
 
@@ -85,7 +111,7 @@ export default function PdfComposerScreen() {
     void Haptics.selectionAsync();
   }, []);
 
-  const renderSource = useCallback<SortableGridRenderItem<PdfSourceFile>>(
+  const renderSource = useCallback<SortableGridRenderItem<ComposerSource>>(
     ({ index, item }) => {
       const selected = selectedUris.has(item.uri);
       const Icon = item.kind === 'pdf' ? FileText : ImageIcon;
@@ -155,7 +181,7 @@ export default function PdfComposerScreen() {
     [colors.ink, colors.muted, colors.onPurple, colors.purple, moveSource, selectedUris, sources.length],
   );
 
-  const handleDragEnd = useCallback<SortableGridDragEndCallback<PdfSourceFile>>(
+  const handleDragEnd = useCallback<SortableGridDragEndCallback<ComposerSource>>(
     ({ data }) => setSources(data),
     [],
   );
@@ -166,7 +192,9 @@ export default function PdfComposerScreen() {
       folderId,
       outputName: name,
       path,
-      sources: sources.filter((source) => selectedUris.has(source.uri)),
+      sources: sources.flatMap(({ kind, name: sourceName, uri }) =>
+        selectedUris.has(uri) ? [{ kind, name: sourceName, uri }] : [],
+      ),
       onProgress: (nextCompleted) => setCompleted(nextCompleted),
     });
     await touchFolder(folderId).catch(() => undefined);
@@ -217,7 +245,7 @@ export default function PdfComposerScreen() {
 
       <View
         className="absolute inset-x-0 bg-paper px-5 pt-3"
-        style={{ bottom: tabBarHeight, paddingBottom: 12 }}
+        style={{ bottom: 0, paddingBottom: tabBarHeight + 12 }}
         testID="pdf-composer-footer">
         <View className="mx-auto w-full max-w-xl flex-row items-center gap-4">
           <AppText variant="caption" className="flex-1">
