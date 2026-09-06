@@ -28,7 +28,10 @@ const mockEntries = [
 ];
 
 jest.mock('expo-router', () => ({
-  Stack: { Screen: () => null },
+  Stack: {
+    Screen: ({ options }: { options: { headerRight?: () => React.ReactNode } }) =>
+      options.headerRight?.() ?? null,
+  },
   useLocalSearchParams: () => ({
     folderId: 'folder-1',
     path: 'Chapter 1',
@@ -174,6 +177,34 @@ describe('PdfComposerScreen', () => {
         }),
       ),
     );
+  });
+
+  test('toggles a file by pressing its row content', async () => {
+    const view = await renderComposer();
+
+    expect(view.getByText('1 file selected')).toBeTruthy();
+    await fireEvent.press(view.getByText('Page 2.jpg'));
+    expect(view.getByText('2 files selected')).toBeTruthy();
+
+    await fireEvent.press(view.getByText('Page 2.jpg'));
+    expect(view.getByText('1 file selected')).toBeTruthy();
+  });
+
+  test('selects and unselects every source from the header checkbox', async () => {
+    const view = await renderComposer();
+
+    expect(
+      view.getByRole('checkbox', { name: 'Select all' }).props.accessibilityState,
+    ).toMatchObject({ checked: 'mixed' });
+    await fireEvent.press(view.getByRole('checkbox', { name: 'Select all' }));
+    expect(view.getByText('2 files selected')).toBeTruthy();
+
+    await fireEvent.press(view.getByRole('checkbox', { name: 'Unselect all' }));
+    expect(view.getByText('0 files selected')).toBeTruthy();
+    expect(view.queryByRole('checkbox', { name: 'Select all' })).toBeNull();
+
+    await fireEvent.press(view.getByText('Page 2.jpg'));
+    expect(view.getByRole('checkbox', { name: 'Select all' })).toBeTruthy();
   });
 
   test('checks every file passed from a multi-selection', async () => {

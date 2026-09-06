@@ -6,6 +6,16 @@ import {
   isValidStudyMinutes,
   reconcileTimerState,
 } from '@/lib/timer';
+import {
+  readHideTimerWhileStudying,
+  readNotifyWhenTimerEnds,
+  writeHideTimerWhileStudying,
+  writeNotifyWhenTimerEnds,
+} from '@/services/timer-preference';
+import {
+  requestTimerNotificationPermission,
+  syncTimerNotifications,
+} from '@/services/timer-notifications';
 import { readTimerState, writeTimerState } from '@/services/timer-state';
 import type { ReconciledTimerState, TimerState } from '@/types/timer';
 
@@ -13,7 +23,15 @@ export type TimerStore = ReconciledTimerState & {
   hydrated: boolean;
   hydrationError: string | null;
   persistenceError: string | null;
+  hideTimerWhileStudying: boolean;
+  notifyWhenTimerEnds: boolean;
+  notificationError: string | null;
+  notificationSaving: boolean;
+  preferenceError: string | null;
+  preferenceSaving: boolean;
   hydrate: (nowMs?: number) => Promise<void>;
+  setHideTimerWhileStudying: (hidden: boolean) => Promise<void>;
+  setNotifyWhenTimerEnds: (enabled: boolean) => Promise<void>;
   setStudyMinutes: (minutes: number) => Promise<void>;
   setRestMinutes: (minutes: number) => Promise<void>;
   start: (nowMs?: number) => Promise<void>;
@@ -27,6 +45,7 @@ export type TimerStore = ReconciledTimerState & {
 
 let hydrationPromise: Promise<void> | null = null;
 let persistenceQueue: Promise<void> = Promise.resolve();
+let notificationQueue: Promise<void> = Promise.resolve();
 
 const defaultState = reconcileTimerState(createDefaultTimerState(), 0);
 
@@ -35,6 +54,12 @@ export const useTimerStore = create<TimerStore>((set, get) => ({
   hydrated: false,
   hydrationError: null,
   persistenceError: null,
+  hideTimerWhileStudying: false,
+  notifyWhenTimerEnds: false,
+  notificationError: null,
+  notificationSaving: false,
+  preferenceError: null,
+  preferenceSaving: false,
 
   hydrate: (nowMs = Date.now()) => {
     if (get().hydrated) {
@@ -46,21 +71,102 @@ export const useTimerStore = create<TimerStore>((set, get) => ({
 
     hydrationPromise = (async () => {
       const loaded = await readTimerState();
+      let hideTimerWhileStudying = false;
+      let notifyWhenTimerEnds = false;
+      let preferenceError: string | null = null;
+      let notificationError: string | null = null;
+      try {
+        hideTimerWhileStudying = await readHideTimerWhileStudying();
+      } catch {
+        preferenceError = 'Could not load the saved timer display preference.';
+      }
+      try {
+        notifyWhenTimerEnds = await readNotifyWhenTimerEnds();
+      } catch {
+        notificationError = 'Could not load the notification preference.';
+      }
       const reconciled = reconcileTimerState(loaded.state, nowMs);
       set({
         ...reconciled,
+        hideTimerWhileStudying,
+        notifyWhenTimerEnds,
+        notificationError,
         hydrated: true,
         hydrationError: loaded.reliable ? null : 'Could not load the saved timer.',
+        preferenceError,
       });
 
       if (loaded.repairable || !timerStatesEqual(loaded.state, reconciled)) {
         await persistTimerState(toTimerState(reconciled));
+      }
+      if (notifyWhenTimerEnds) {
+        await queueTimerNotificationSync(reconciled, true, nowMs);
       }
     })().finally(() => {
       hydrationPromise = null;
     });
 
     return hydrationPromise;
+  },
+
+  setHideTimerWhileStudying: async (hidden) => {
+    const current = get();
+    if (current.preferenceSaving || hidden === current.hideTimerWhileStudying) {
+      return;
+    }
+
+    set({ hideTimerWhileStudying: hidden, preferenceError: null, preferenceSaving: true });
+    try {
+      await writeHideTimerWhileStudying(hidden);
+      set({ preferenceError: null, preferenceSaving: false });
+    } catch {
+      set({
+        hideTimerWhileStudying: current.hideTimerWhileStudying,
+        preferenceError: 'Could not save the timer display preference.',
+        preferenceSaving: false,
+      });
+    }
+  },
+
+  setNotifyWhenTimerEnds: async (enabled) => {
+    const current = get();
+    if (current.notificationSaving || enabled === current.notifyWhenTimerEnds) {
+      return;
+    }
+
+    set({ notificationError: null, notificationSaving: true });
+    if (enabled) {
+      let allowed: boolean;
+      try {
+        allowed = await requestTimerNotificationPermission();
+      } catch {
+        set({
+          notificationError: 'Could not request notification permission.',
+          notificationSaving: false,
+        });
+        return;
+      }
+      if (!allowed) {
+        set({
+          notificationError: 'Notifications are disabled in your device settings.',
+          notificationSaving: false,
+        });
+        return;
+      }
+    }
+
+    try {
+      await writeNotifyWhenTimerEnds(enabled);
+    } catch {
+      set({
+        notificationError: 'Could not save the notification preference.',
+        notificationSaving: false,
+      });
+      return;
+    }
+
+    set({ notifyWhenTimerEnds: enabled, notificationSaving: false });
+    await queueTimerNotificationSync(toTimerState(get()), enabled);
   },
 
   setStudyMinutes: (minutes) => {
@@ -110,7 +216,7 @@ export const useTimerStore = create<TimerStore>((set, get) => ({
       secondsRemaining: durationMs / 1000,
     };
     set(next);
-    return persistTimerState(toTimerState(next));
+    return persistTimerUpdate(next, true, nowMs);
   },
 
   pause: (nowMs = Date.now()) => {
@@ -140,7 +246,7 @@ export const useTimerStore = create<TimerStore>((set, get) => ({
       secondsRemaining: Math.ceil(remainingMs / 1000),
     };
     set(next);
-    return persistTimerState(toTimerState(next));
+    return persistTimerUpdate(next, true, nowMs);
   },
 
   resume: (nowMs = Date.now()) => {
@@ -158,7 +264,7 @@ export const useTimerStore = create<TimerStore>((set, get) => ({
       secondsRemaining: Math.ceil(current.remainingMs / 1000),
     };
     set(next);
-    return persistTimerState(toTimerState(next));
+    return persistTimerUpdate(next, true, nowMs);
   },
 
   reset: () => returnToIdle(set, get),
@@ -191,7 +297,7 @@ export const useTimerStore = create<TimerStore>((set, get) => ({
       nowMs,
     );
     set(next);
-    return persistTimerState(toTimerState(next));
+    return persistTimerUpdate(next, true, nowMs);
   },
 
   reconcile: (nowMs = Date.now()) => {
@@ -229,7 +335,22 @@ function returnToIdle(
     0,
   );
   set(next);
-  return persistTimerState(toTimerState(next));
+  return persistTimerUpdate(next, true);
+}
+
+function persistTimerUpdate(
+  state: ReconciledTimerState,
+  updateNotifications: boolean,
+  nowMs = Date.now(),
+): Promise<void> {
+  const persistence = persistTimerState(toTimerState(state));
+  if (!updateNotifications || !useTimerStore.getState().notifyWhenTimerEnds) {
+    return persistence;
+  }
+
+  return Promise.all([persistence, queueTimerNotificationSync(state, true, nowMs)]).then(
+    () => undefined,
+  );
 }
 
 function persistTimerState(state: TimerState): Promise<void> {
@@ -248,6 +369,28 @@ function persistTimerState(state: TimerState): Promise<void> {
     },
   );
   return persistenceQueue;
+}
+
+function queueTimerNotificationSync(
+  state: TimerState,
+  enabled: boolean,
+  nowMs = Date.now(),
+): Promise<void> {
+  const sync = notificationQueue.then(
+    () => syncTimerNotifications(state, enabled, nowMs),
+    () => syncTimerNotifications(state, enabled, nowMs),
+  );
+  notificationQueue = sync.then(
+    () => {
+      useTimerStore.setState({ notificationError: null });
+    },
+    () => {
+      useTimerStore.setState({
+        notificationError: 'Could not update scheduled timer notifications.',
+      });
+    },
+  );
+  return notificationQueue;
 }
 
 function toTimerState(state: TimerState): TimerState {

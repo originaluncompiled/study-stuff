@@ -28,6 +28,7 @@ import { AppText } from '@/components/app-text';
 import { EntryRow } from '@/components/entry-row';
 import { getMainTabBarHeight } from '@/components/main-tab-bar';
 import { NameDialog } from '@/components/name-dialog';
+import { SelectAllButton } from '@/components/select-all-button';
 import { iconButtonRipple } from '@/constants/press-feedback';
 import { orderLibraryEntries } from '@/lib/library-entry-order';
 import { joinRelativePath, normalizeRelativePath, parentRelativePath } from '@/lib/paths';
@@ -100,6 +101,8 @@ export default function FolderScreen() {
   const orderedEntries = orderLibraryEntries(entries, favouritePaths);
   const selectedEntries = orderedEntries.filter((entry) => selectedPaths.has(entry.relativePath));
   const selectionMode = selectedPaths.size > 0;
+  const allEntriesSelected =
+    orderedEntries.length > 0 && selectedEntries.length === orderedEntries.length;
   const headerSelectionProgress = useSharedValue(selectionMode ? 1 : 0);
   const addHeaderActionAnimatedStyle = useAnimatedStyle(() => ({
     opacity: 1 - headerSelectionProgress.get(),
@@ -262,6 +265,15 @@ export default function FolderScreen() {
       }
       return next;
     });
+    void Haptics.selectionAsync();
+  }
+
+  function toggleAllSelections() {
+    setSelectedPaths(
+      allEntriesSelected
+        ? new Set()
+        : new Set(orderedEntries.map((entry) => entry.relativePath)),
+    );
     void Haptics.selectionAsync();
   }
 
@@ -443,42 +455,51 @@ export default function FolderScreen() {
         options={{
           title: selectionMode ? `${selectedPaths.size} Selected` : title,
           headerRight: () => (
-            <Pressable
-              accessibilityLabel={selectionMode ? 'Selected item actions' : 'Add to folder'}
-              accessibilityRole="button"
-              accessibilityState={
-                selectionMode
-                  ? { expanded: selectionSheetVisible }
-                  : { busy: addingFiles, disabled: addingFiles }
-              }
-              android_ripple={iconButtonRipple}
-              className="h-11 w-11 items-center justify-center rounded-full ios:active:bg-line/50 web:active:bg-line/50"
-              disabled={!selectionMode && addingFiles}
-              hitSlop={8}
-              onPress={() =>
-                selectionMode ? setSelectionSheetVisible(true) : setAddSheetVisible(true)
-              }>
-              {!selectionMode && addingFiles ? (
-                <ActivityIndicator color={colors.purple} />
-              ) : (
-                <>
-                  <Animated.View
-                    className="absolute inset-0 items-center justify-center"
-                    pointerEvents="none"
-                    style={addHeaderActionAnimatedStyle}
-                    testID="add-folder-header-icon">
-                    <Plus color={colors.ink} size={25} />
-                  </Animated.View>
-                  <Animated.View
-                    className="absolute inset-0 items-center justify-center"
-                    pointerEvents="none"
-                    style={selectionHeaderActionAnimatedStyle}
-                    testID="selection-header-icon">
-                    <MoreHorizontal color={colors.ink} size={25} />
-                  </Animated.View>
-                </>
-              )}
-            </Pressable>
+            <View className="flex-row items-center">
+              {selectionMode ? (
+                <SelectAllButton
+                  onPress={toggleAllSelections}
+                  selectedCount={selectedEntries.length}
+                  totalCount={orderedEntries.length}
+                />
+              ) : null}
+              <Pressable
+                accessibilityLabel={selectionMode ? 'Selected item actions' : 'Add to folder'}
+                accessibilityRole="button"
+                accessibilityState={
+                  selectionMode
+                    ? { expanded: selectionSheetVisible }
+                    : { busy: addingFiles, disabled: addingFiles }
+                }
+                android_ripple={iconButtonRipple}
+                className="h-11 w-11 items-center justify-center rounded-full ios:active:bg-line/50 web:active:bg-line/50"
+                disabled={!selectionMode && addingFiles}
+                hitSlop={8}
+                onPress={() =>
+                  selectionMode ? setSelectionSheetVisible(true) : setAddSheetVisible(true)
+                }>
+                {!selectionMode && addingFiles ? (
+                  <ActivityIndicator color={colors.purple} />
+                ) : (
+                  <>
+                    <Animated.View
+                      className="absolute inset-0 items-center justify-center"
+                      pointerEvents="none"
+                      style={addHeaderActionAnimatedStyle}
+                      testID="add-folder-header-icon">
+                      <Plus color={colors.ink} size={25} />
+                    </Animated.View>
+                    <Animated.View
+                      className="absolute inset-0 items-center justify-center"
+                      pointerEvents="none"
+                      style={selectionHeaderActionAnimatedStyle}
+                      testID="selection-header-icon">
+                      <MoreHorizontal color={colors.ink} size={25} />
+                    </Animated.View>
+                  </>
+                )}
+              </Pressable>
+            </View>
           ),
         }}
       />

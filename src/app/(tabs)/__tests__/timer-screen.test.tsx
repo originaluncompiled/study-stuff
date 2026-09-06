@@ -1,4 +1,5 @@
 import { act, fireEvent, render } from '@testing-library/react-native';
+import { StyleSheet } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import TimerScreen from '@/app/(tabs)/timer';
@@ -132,6 +133,9 @@ describe('TimerScreen', () => {
 
     expect(view.getByRole('button', { name: 'Reset Timer' }).props.className).toContain(
       'border-strong-line',
+    );
+    expect(StyleSheet.flatten(view.getByTestId('reset-timer-container').props.style)).not.toHaveProperty(
+      'opacity',
     );
   });
 

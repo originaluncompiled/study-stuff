@@ -54,6 +54,9 @@ describe('PdfScreen', () => {
       hydrated: true,
       hydrationError: null,
       persistenceError: null,
+      hideTimerWhileStudying: false,
+      preferenceError: null,
+      preferenceSaving: false,
     });
   });
 
@@ -79,10 +82,11 @@ describe('PdfScreen', () => {
     const timerPill = view.getByRole('button', {
       name: 'Study timer, 25:00 remaining. Open timer controls.',
     });
-    expect(timerPill.props.className).toContain('bg-purple');
+    expect(timerPill.props.className).toContain('bg-timer-action');
     expect(timerPill.props.className).toContain('border-offset-shadow');
     expect(timerPill.props.className).toContain('h-11');
-    expect(view.getByTestId('pdf-timer-running-icon')).toBeTruthy();
+    expect(view.getByText('25:00').props.className).toContain('text-off-white');
+    expect(view.getByTestId('pdf-timer-running-icon').props.color).toBe(colors.offWhite);
     expect(view.getByTestId('pdf-header')).toHaveStyle({ height: 91, paddingTop: 47 });
     expect(view.getByTestId('pdf-timer-pill').props.className).toContain('absolute');
     expect(view.getByTestId('pdf-timer-pill')).toHaveStyle({ top: 97 });
@@ -150,6 +154,60 @@ describe('PdfScreen', () => {
     await fireEvent.press(view.getByRole('button', { name: 'Stop Timer' }));
     expect(useTimerStore.getState().status).toBe('idle');
     expect(view.queryByRole('button', { name: /Open timer controls/ })).toBeNull();
+  });
+
+  test('hides only the study countdown in the pill while keeping it in timer controls', async () => {
+    useTimerStore.setState({
+      status: 'running',
+      phase: 'study',
+      deadlineAtMs: Date.now() + 25 * 60_000,
+      remainingMs: null,
+      secondsRemaining: 1500,
+      hideTimerWhileStudying: true,
+    });
+    const view = await render(
+      <SafeAreaProvider
+        initialMetrics={{
+          frame: { height: 844, width: 390, x: 0, y: 0 },
+          insets: { bottom: 34, left: 0, right: 0, top: 47 },
+        }}>
+        <PdfScreen />
+      </SafeAreaProvider>,
+    );
+
+    await view.findByTestId('pdf-viewer');
+    const timerPill = view.getByRole('button', {
+      name: 'Study timer, 25:00 remaining. Open timer controls.',
+    });
+    expect(timerPill.props.className).toContain('w-11');
+    expect(view.queryByText('25:00')).toBeNull();
+    expect(view.getByTestId('pdf-timer-running-icon')).toBeTruthy();
+
+    await fireEvent.press(timerPill);
+    expect(view.getByText('25:00 remaining')).toBeTruthy();
+  });
+
+  test('keeps the rest countdown visible when study countdowns are hidden', async () => {
+    useTimerStore.setState({
+      status: 'running',
+      phase: 'rest',
+      deadlineAtMs: Date.now() + 5 * 60_000,
+      remainingMs: null,
+      secondsRemaining: 300,
+      hideTimerWhileStudying: true,
+    });
+    const view = await render(
+      <SafeAreaProvider
+        initialMetrics={{
+          frame: { height: 844, width: 390, x: 0, y: 0 },
+          insets: { bottom: 34, left: 0, right: 0, top: 47 },
+        }}>
+        <PdfScreen />
+      </SafeAreaProvider>,
+    );
+
+    await view.findByTestId('pdf-viewer');
+    expect(view.getByText('5:00')).toBeTruthy();
   });
 
   test('uses a coffee icon while the rest timer is running', async () => {

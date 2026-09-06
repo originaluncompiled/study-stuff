@@ -5,6 +5,7 @@ function MockIcon(props: ViewProps) {
 }
 
 export const AlertCircle = MockIcon;
+export const Bell = MockIcon;
 export const BookOpen = MockIcon;
 export const Camera = MockIcon;
 export const Check = MockIcon;
@@ -12,6 +13,7 @@ export const ChevronLeft = MockIcon;
 export const ChevronRight = MockIcon;
 export const Clock3 = MockIcon;
 export const Coffee = MockIcon;
+export const EyeOff = MockIcon;
 export const File = MockIcon;
 export const FilePlus2 = MockIcon;
 export const FileText = MockIcon;

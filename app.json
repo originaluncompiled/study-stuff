@@ -43,7 +43,11 @@
         {
           "backgroundColor": "#F7F1E3",
           "image": "./assets/images/splash-icon.png",
-          "imageWidth": 220
+          "imageWidth": 220,
+          "dark": {
+            "backgroundColor": "#19161D",
+            "image": "./assets/images/splash-icon.png"
+          }
         }
       ],
       [
@@ -51,6 +55,13 @@
         {
           "hidden": false,
           "style": "dark"
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/images/android-icon-monochrome.png",
+          "color": "#6D3CEB"
         }
       ],
       "@config-plugins/react-native-pdf",

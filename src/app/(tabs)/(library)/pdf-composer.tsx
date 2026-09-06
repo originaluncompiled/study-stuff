@@ -14,6 +14,7 @@ import Sortable, {
 import { AppText } from '@/components/app-text';
 import { getMainTabBarHeight } from '@/components/main-tab-bar';
 import { NameDialog } from '@/components/name-dialog';
+import { SelectAllButton } from '@/components/select-all-button';
 import { getLibraryFile, listDirectory } from '@/services/library-files';
 import { createLibraryPdf, type PdfSourceFile } from '@/services/pdf-files';
 import { useLibraryStore } from '@/store/library-store';
@@ -83,6 +84,7 @@ export default function PdfComposerScreen() {
   const [completed, setCompleted] = useState(0);
 
   const selectedCount = selectedUris.size;
+  const allSourcesSelected = sources.length > 0 && selectedCount === sources.length;
   const tabBarHeight = getMainTabBarHeight(insets.bottom);
 
   function toggleSource(uri: string) {
@@ -96,6 +98,11 @@ export default function PdfComposerScreen() {
       }
       return next;
     });
+  }
+
+  function toggleAllSources() {
+    void Haptics.selectionAsync();
+    setSelectedUris(allSourcesSelected ? new Set() : new Set(sources.map((source) => source.uri)));
   }
 
   const moveSource = useCallback((index: number, offset: -1 | 1) => {
@@ -118,41 +125,42 @@ export default function PdfComposerScreen() {
 
       return (
         <View
-          className={`h-[76px] flex-row items-center rounded-2xl border px-3 ${
+          className={`h-[76px] flex-row items-center rounded-2xl border ${
             selected ? 'border-purple bg-paper-raised' : 'border-line bg-paper'
           }`}>
           <Pressable
             accessibilityLabel={`${selected ? 'Remove' : 'Add'} ${item.name}`}
             accessibilityRole="checkbox"
             accessibilityState={{ checked: selected }}
-            className="h-12 w-12 items-center justify-center"
-            hitSlop={4}
+            className="h-full min-w-0 flex-1 flex-row items-center pl-3"
             onPress={() => toggleSource(item.uri)}>
-            {selected ? (
-              <View className="h-7 w-7 items-center justify-center rounded-lg bg-purple">
-                <Check color={colors.onPurple} size={19} strokeWidth={3} />
-              </View>
-            ) : (
-              <Square color={colors.muted} size={28} strokeWidth={1.8} />
-            )}
+            <View accessible={false} className="h-12 w-12 items-center justify-center">
+              {selected ? (
+                <View className="h-7 w-7 items-center justify-center rounded-lg bg-purple">
+                  <Check color={colors.onPurple} size={19} strokeWidth={3} />
+                </View>
+              ) : (
+                <Square color={colors.muted} size={28} strokeWidth={1.8} />
+              )}
+            </View>
+
+            <View className="mr-3 h-12 w-12 overflow-hidden rounded-xl border border-line bg-paper">
+              {item.kind === 'image' ? (
+                <Image accessibilityIgnoresInvertColors contentFit="cover" source={{ uri: item.uri }} style={{ flex: 1 }} />
+              ) : (
+                <View className="flex-1 items-center justify-center">
+                  <Icon color={colors.purple} size={25} strokeWidth={2.2} />
+                </View>
+              )}
+            </View>
+
+            <View className="min-w-0 flex-1">
+              <AppText variant="label" numberOfLines={1}>
+                {item.name}
+              </AppText>
+              <AppText variant="caption">{item.kind === 'pdf' ? 'PDF document' : 'Image'}</AppText>
+            </View>
           </Pressable>
-
-          <View className="mr-3 h-12 w-12 overflow-hidden rounded-xl border border-line bg-paper">
-            {item.kind === 'image' ? (
-              <Image accessibilityIgnoresInvertColors contentFit="cover" source={{ uri: item.uri }} style={{ flex: 1 }} />
-            ) : (
-              <View className="flex-1 items-center justify-center">
-                <Icon color={colors.purple} size={25} strokeWidth={2.2} />
-              </View>
-            )}
-          </View>
-
-          <View className="min-w-0 flex-1">
-            <AppText variant="label" numberOfLines={1}>
-              {item.name}
-            </AppText>
-            <AppText variant="caption">{item.kind === 'pdf' ? 'PDF document' : 'Image'}</AppText>
-          </View>
 
           <Sortable.Handle>
             <Pressable
@@ -163,7 +171,7 @@ export default function PdfComposerScreen() {
               accessibilityLabel={`Reorder ${item.name}`}
               accessibilityRole="adjustable"
               accessibilityValue={{ text: `${index + 1} of ${sources.length}` }}
-              className="h-12 w-12 items-center justify-center"
+              className="mr-3 h-12 w-12 items-center justify-center"
               hitSlop={4}
               onAccessibilityAction={(event) => {
                 if (event.nativeEvent.actionName === 'decrement') {
@@ -204,7 +212,20 @@ export default function PdfComposerScreen() {
 
   return (
     <View className="flex-1 bg-paper">
-      <Stack.Screen options={{ title: 'Create PDF' }} />
+      <Stack.Screen
+        options={{
+          title: 'Create PDF',
+          headerRight: () => (
+            selectedCount > 0 ? (
+              <SelectAllButton
+                onPress={toggleAllSources}
+                selectedCount={selectedCount}
+                totalCount={sources.length}
+              />
+            ) : null
+          ),
+        }}
+      />
       <Animated.ScrollView
         ref={scrollableRef}
         contentContainerStyle={{

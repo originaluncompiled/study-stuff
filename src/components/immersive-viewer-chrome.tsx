@@ -100,7 +100,9 @@ export function ImmersiveViewerChrome({
   const timerDeadlineAtMs = useTimerStore((state) => state.deadlineAtMs);
   const timerRemainingMs = useTimerStore((state) => state.remainingMs);
   const timerSecondsRemaining = useTimerStore((state) => state.secondsRemaining);
+  const hideTimerWhileStudying = useTimerStore((state) => state.hideTimerWhileStudying);
   const timerActive = timerHydrated && timerStatus !== 'idle';
+  const timerTimeHidden = hideTimerWhileStudying && timerPhase === 'study';
   const TimerPillIcon = timerStatus === 'paused' ? Pause : timerPhase === 'rest' ? Coffee : Clock3;
   const timerSession =
     timerStatus === 'running'
@@ -162,16 +164,16 @@ export function ImmersiveViewerChrome({
             { top: chrome.headerHeight + timerPillGap },
             chrome.headerAnimatedStyle,
           ]}>
-          <View className="relative h-11 min-w-28">
+          <View className={`relative h-11 ${timerTimeHidden ? 'w-11' : 'min-w-28'}`}>
             <View className="absolute inset-0 translate-x-1 translate-y-1 rounded-full bg-offset-shadow" />
             <Pressable
               accessibilityLabel={`${timerPhase === 'study' ? 'Study' : 'Rest'} timer${timerStatus === 'paused' ? ' paused' : ''}, ${formatTimer(timerSecondsRemaining)} remaining. Open timer controls.`}
               accessibilityRole="button"
               accessibilityState={{ expanded: timerManagerVisible }}
-              className="h-11 min-w-28 flex-row items-center justify-center gap-2 rounded-full border-2 border-offset-shadow bg-purple px-4 active:bg-purple-dark"
+              className={`h-11 flex-row items-center justify-center gap-2 rounded-full border-2 border-offset-shadow bg-timer-action active:bg-timer-action-pressed ${timerTimeHidden ? 'w-11' : 'min-w-28 px-4'}`}
               onPress={() => setTimerManagerSession(timerSession)}>
               <TimerPillIcon
-                color={colors.onPurple}
+                color={colors.offWhite}
                 size={16}
                 strokeWidth={2.4}
                 testID={
@@ -182,9 +184,11 @@ export function ImmersiveViewerChrome({
                       : `${testIDPrefix}-timer-running-icon`
                 }
               />
-              <AppText className="text-on-purple" variant="label">
-                {formatTimer(timerSecondsRemaining)}
-              </AppText>
+              {timerTimeHidden ? null : (
+                <AppText className="text-off-white" variant="label">
+                  {formatTimer(timerSecondsRemaining)}
+                </AppText>
+              )}
             </Pressable>
           </View>
         </Animated.View>

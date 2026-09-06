@@ -1,6 +1,8 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Notifications from 'expo-notifications';
 
 import { createDefaultTimerState, reconcileTimerState } from '@/lib/timer';
+import { hideTimerWhileStudyingStorageKey } from '@/services/timer-preference';
 import { parseTimerState, writeTimerState } from '@/services/timer-state';
 import { useTimerStore } from '@/store/timer-store';
 
@@ -29,7 +31,26 @@ describe('timer store', () => {
       hydrated: false,
       hydrationError: null,
       persistenceError: null,
+      hideTimerWhileStudying: false,
+      notificationError: null,
+      notificationSaving: false,
+      notifyWhenTimerEnds: false,
+      preferenceError: null,
+      preferenceSaving: false,
     });
+  });
+
+  test('hydrates and persists the study countdown visibility preference', async () => {
+    await AsyncStorage.setItem(hideTimerWhileStudyingStorageKey, 'true');
+
+    await useTimerStore.getState().hydrate(0);
+    expect(useTimerStore.getState()).toMatchObject({
+      hideTimerWhileStudying: true,
+      preferenceError: null,
+    });
+
+    await useTimerStore.getState().setHideTimerWhileStudying(false);
+    expect(await AsyncStorage.getItem(hideTimerWhileStudyingStorageKey)).toBe('false');
   });
 
   test('persists duration changes and rejects invalid values', async () => {
@@ -41,6 +62,30 @@ describe('timer store', () => {
     expect(useTimerStore.getState().studyMinutes).toBe(120);
     expect(useTimerStore.getState().restMinutes).toBe(30);
     await expect(persistedState()).resolves.toMatchObject({ studyMinutes: 120, restMinutes: 30 });
+  });
+
+  test('schedules timer completions and cancels them when paused', async () => {
+    const scheduleMock = Notifications.scheduleNotificationAsync as jest.MockedFunction<
+      typeof Notifications.scheduleNotificationAsync
+    >;
+    const cancelMock = Notifications.cancelScheduledNotificationAsync as jest.MockedFunction<
+      typeof Notifications.cancelScheduledNotificationAsync
+    >;
+    scheduleMock.mockClear();
+    cancelMock.mockClear();
+    useTimerStore.setState({ notifyWhenTimerEnds: true });
+
+    await useTimerStore.getState().start(1000);
+
+    expect(scheduleMock).toHaveBeenCalledTimes(2);
+    expect(scheduleMock.mock.calls.map(([request]) => request.content.title)).toEqual([
+      'Study timer complete',
+      'Rest timer complete',
+    ]);
+
+    await useTimerStore.getState().pause(2000);
+
+    expect(cancelMock).toHaveBeenCalledTimes(4);
   });
 
   test('locks both durations while running and paused', async () => {

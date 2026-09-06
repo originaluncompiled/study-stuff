@@ -277,9 +277,9 @@ describe('FolderScreen imports', () => {
     expect(mockStackOptions?.title).toBe('1 Selected');
     expect(view.getByTestId('add-folder-header-icon')).toHaveAnimatedStyle({ opacity: 0 });
     expect(view.getByTestId('selection-header-icon')).toHaveAnimatedStyle({ opacity: 1 });
-    expect(
-      view.getAllByRole('checkbox').map((checkbox) => checkbox.props.accessibilityLabel),
-    ).toEqual(['Deselect Notes.pdf', 'Select Diagram.jpg']);
+    expect(view.getByRole('checkbox', { name: 'Select all' })).toBeTruthy();
+    expect(view.getByRole('checkbox', { name: 'Deselect Notes.pdf' })).toBeTruthy();
+    expect(view.getByRole('checkbox', { name: 'Select Diagram.jpg' })).toBeTruthy();
     expect(view.queryByRole('button', { name: 'Manage Notes.pdf' })).toBeNull();
 
     await fireEvent.press(view.getByRole('checkbox', { name: 'Select Diagram.jpg' }));
@@ -301,6 +301,39 @@ describe('FolderScreen imports', () => {
         ]),
       },
     });
+  });
+
+  test('selects and unselects every entry from the header checkbox', async () => {
+    mockListDirectory.mockReturnValue([
+      {
+        childCount: null,
+        kind: 'image',
+        name: 'Diagram.jpg',
+        relativePath: 'Chapter 1/Diagram.jpg',
+        size: 2048,
+      },
+      {
+        childCount: null,
+        kind: 'pdf',
+        name: 'Notes.pdf',
+        relativePath: 'Chapter 1/Notes.pdf',
+        size: 4096,
+      },
+    ]);
+    const view = await renderFolder();
+
+    await flushFolderLoad();
+    await fireEvent(view.getByRole('button', { name: 'Open Notes.pdf' }), 'longPress');
+
+    const selectAll = view.getByRole('checkbox', { name: 'Select all' });
+    expect(selectAll.props.accessibilityState).toMatchObject({ checked: 'mixed' });
+    await fireEvent.press(selectAll);
+    expect(mockStackOptions?.title).toBe('2 Selected');
+    expect(view.getByRole('checkbox', { name: 'Deselect Diagram.jpg' })).toBeTruthy();
+
+    await fireEvent.press(view.getByRole('checkbox', { name: 'Unselect all' }));
+    expect(mockStackOptions?.title).toBe('Chapter 1');
+    expect(view.queryByRole('checkbox', { name: 'Select all' })).toBeNull();
   });
 
   test('bulk favourites and unfavourites selected items', async () => {

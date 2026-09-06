@@ -149,7 +149,6 @@ export default function TimerScreen() {
   const timerError = persistenceError ?? hydrationError;
   const resetButtonAnimatedStyle = useAnimatedStyle(() => ({
     marginRight: resetProgress.get() * timerControlGap,
-    opacity: resetProgress.get(),
     width: resetProgress.get() * resetButtonSize,
   }));
   const timerButtonAnimatedStyle = useAnimatedStyle(() => {
@@ -308,7 +307,8 @@ export default function TimerScreen() {
               className="relative h-16"
               importantForAccessibility={status === 'idle' ? 'no-hide-descendants' : 'auto'}
               pointerEvents={status === 'idle' ? 'none' : 'auto'}
-              style={resetButtonAnimatedStyle}>
+              style={resetButtonAnimatedStyle}
+              testID="reset-timer-container">
               {status !== 'idle' || resetContentVisible ? (
                 <>
                   <View className="absolute inset-0 translate-x-1 translate-y-1 rounded-2xl bg-offset-shadow" />
