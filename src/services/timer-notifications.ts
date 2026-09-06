@@ -1,5 +1,5 @@
 import * as Notifications from 'expo-notifications';
-import { Platform } from 'react-native';
+import { AppState, Platform } from 'react-native';
 
 import { colors } from '@/constants/theme';
 import type { TimerState } from '@/types/timer';
@@ -7,6 +7,18 @@ import type { TimerState } from '@/types/timer';
 const TIMER_NOTIFICATION_CHANNEL_ID = 'timer-completions-v2';
 const STUDY_COMPLETE_NOTIFICATION_ID = 'studystuff-study-timer-complete';
 const REST_COMPLETE_NOTIFICATION_ID = 'studystuff-rest-timer-complete';
+
+Notifications.setNotificationHandler({
+  handleNotification: async () => {
+    const shouldPresent = AppState.currentState !== 'active';
+    return {
+      shouldPlaySound: shouldPresent,
+      shouldSetBadge: false,
+      shouldShowBanner: shouldPresent,
+      shouldShowList: shouldPresent,
+    };
+  },
+});
 
 export async function requestTimerNotificationPermission(): Promise<boolean> {
   if (Platform.OS === 'web') {
@@ -75,7 +87,9 @@ function scheduleTimerNotification(phase: 'study' | 'rest', deadlineAtMs: number
       ? STUDY_COMPLETE_NOTIFICATION_ID
       : REST_COMPLETE_NOTIFICATION_ID,
     content: {
-      body: studyComplete ? 'Time to rest.' : 'Ready for another study session?',
+      body: studyComplete
+        ? 'Go take a break for a few minutes!'
+        : 'Come back to start another study timer!',
       color: colors.purple,
       data: { phase, type: 'timerComplete' },
       sound: true,

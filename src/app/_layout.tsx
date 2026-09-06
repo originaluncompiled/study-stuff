@@ -4,12 +4,13 @@ import { useFonts } from 'expo-font';
 import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { vars } from 'nativewind';
 import { featureFlags } from 'react-native-screens';
 
+import { AppLaunchScreen } from '@/components/app-launch-screen';
 import { TimerRuntime } from '@/components/timer-runtime';
 import { getThemeVariables } from '@/constants/theme';
 import { useLibraryStore } from '@/store/library-store';
@@ -35,6 +36,7 @@ export default function RootLayout() {
   const hydrateLibrary = useLibraryStore((state) => state.hydrate);
   const timerHydrated = useTimerStore((state) => state.hydrated);
   const hydrateTimer = useTimerStore((state) => state.hydrate);
+  const [nativeSplashHidden, setNativeSplashHidden] = useState(false);
   const [fontsLoaded, fontError] = useFonts({
     DMSans_400Regular: require('@expo-google-fonts/dm-sans/400Regular/DMSans_400Regular.ttf'),
     DMSans_500Medium: require('@expo-google-fonts/dm-sans/500Medium/DMSans_500Medium.ttf'),
@@ -50,13 +52,41 @@ export default function RootLayout() {
   }, [hydrateLibrary, hydrateTheme, hydrateTimer]);
 
   useEffect(() => {
-    if ((fontsLoaded || fontError) && libraryHydrated && themeHydrated && timerHydrated) {
-      SplashScreen.hideAsync().catch(() => undefined);
+    if (!themeHydrated) {
+      return;
     }
-  }, [fontError, fontsLoaded, libraryHydrated, themeHydrated, timerHydrated]);
 
-  if ((!fontsLoaded && !fontError) || !libraryHydrated || !themeHydrated || !timerHydrated) {
+    let cancelled = false;
+    let frame: number | undefined;
+    void SplashScreen.hideAsync()
+      .catch(() => undefined)
+      .finally(() => {
+        frame = requestAnimationFrame(() => {
+          if (!cancelled) {
+            setNativeSplashHidden(true);
+          }
+        });
+      });
+
+    return () => {
+      cancelled = true;
+      if (frame !== undefined) {
+        cancelAnimationFrame(frame);
+      }
+    };
+  }, [themeHydrated]);
+
+  if (!themeHydrated) {
     return null;
+  }
+
+  if (
+    !nativeSplashHidden ||
+    (!fontsLoaded && !fontError) ||
+    !libraryHydrated ||
+    !timerHydrated
+  ) {
+    return <AppLaunchScreen />;
   }
 
   const baseNavigationTheme = themeMode === 'dark' ? DarkTheme : DefaultTheme;

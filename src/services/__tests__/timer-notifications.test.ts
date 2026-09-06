@@ -1,5 +1,5 @@
 import * as Notifications from 'expo-notifications';
-import { Platform } from 'react-native';
+import { AppState, Platform } from 'react-native';
 
 import {
   requestTimerNotificationPermission,
@@ -48,8 +48,38 @@ describe('timer notifications', () => {
     scheduleMock.mockImplementation(async (request) => request.identifier ?? 'notification');
   });
 
-  test('does not opt into showing notifications while the app is active', () => {
-    expect(setHandlerMock).not.toHaveBeenCalled();
+  test('presents timer notifications only while the app is unfocused', async () => {
+    expect(setHandlerMock).toHaveBeenCalledTimes(1);
+    const handler = setHandlerMock.mock.calls[0]?.[0];
+    if (!handler) {
+      throw new Error('Expected the timer notification handler to be registered.');
+    }
+
+    const originalAppState = AppState.currentState;
+    try {
+      Object.defineProperty(AppState, 'currentState', { configurable: true, value: 'active' });
+      await expect(
+        handler.handleNotification({} as Notifications.Notification),
+      ).resolves.toMatchObject({
+        shouldPlaySound: false,
+        shouldShowBanner: false,
+        shouldShowList: false,
+      });
+
+      Object.defineProperty(AppState, 'currentState', { configurable: true, value: 'background' });
+      await expect(
+        handler.handleNotification({} as Notifications.Notification),
+      ).resolves.toMatchObject({
+        shouldPlaySound: true,
+        shouldShowBanner: true,
+        shouldShowList: true,
+      });
+    } finally {
+      Object.defineProperty(AppState, 'currentState', {
+        configurable: true,
+        value: originalAppState,
+      });
+    }
   });
 
   test('schedules study and rest completion at their absolute deadlines', async () => {
@@ -60,7 +90,11 @@ describe('timer notifications', () => {
       1,
       expect.objectContaining({
         identifier: 'studystuff-study-timer-complete',
-        content: expect.objectContaining({ sound: true, title: 'Study timer complete' }),
+        content: expect.objectContaining({
+          body: 'Go take a break for a few minutes!',
+          sound: true,
+          title: 'Study timer complete',
+        }),
         trigger: expect.objectContaining({ date: 61_000, type: 'date' }),
       }),
     );
@@ -68,7 +102,10 @@ describe('timer notifications', () => {
       2,
       expect.objectContaining({
         identifier: 'studystuff-rest-timer-complete',
-        content: expect.objectContaining({ title: 'Rest timer complete' }),
+        content: expect.objectContaining({
+          body: 'Come back to start another study timer!',
+          title: 'Rest timer complete',
+        }),
         trigger: expect.objectContaining({ date: 361_000, type: 'date' }),
       }),
     );
