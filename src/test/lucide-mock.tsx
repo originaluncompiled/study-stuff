@@ -13,6 +13,7 @@ export const ChevronLeft = MockIcon;
 export const ChevronRight = MockIcon;
 export const Clock3 = MockIcon;
 export const Coffee = MockIcon;
+export const Download = MockIcon;
 export const EyeOff = MockIcon;
 export const File = MockIcon;
 export const FilePlus2 = MockIcon;

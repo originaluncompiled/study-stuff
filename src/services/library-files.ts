@@ -257,6 +257,100 @@ export async function pickAndCopyImages(
   }
 }
 
+export async function exportLibraryEntries(
+  folderId: string,
+  entries: LibraryEntry[],
+): Promise<number> {
+  if (Platform.OS === 'web') {
+    throw new Error('Exporting files to device storage is only available on Android and iOS.');
+  }
+  if (entries.length === 0) {
+    return 0;
+  }
+
+  let destination: Directory;
+  try {
+    destination = await Directory.pickDirectoryAsync();
+  } catch (error) {
+    if (isDirectoryPickerCancellation(error)) {
+      return 0;
+    }
+    throw error;
+  }
+
+  ensureLibraryStorage();
+  const batch = new Directory(stagingDirectory(), randomUUID());
+  const createdNames: string[] = [];
+  let batchCreated = false;
+
+  try {
+    const destinationNames = new Set(destination.list().map((entry) => entry.name));
+
+    for (const entry of entries) {
+      const source =
+        entry.kind === 'directory'
+          ? new Directory(getFolderDirectory(folderId), ...relativePathSegments(entry.relativePath))
+          : getLibraryFile(folderId, entry.relativePath);
+      if (!source.exists) {
+        throw new Error(`“${entry.name}” is no longer stored on this device.`);
+      }
+
+      const exportName = getAvailableFileName(source.name, destinationNames);
+      let exportSource: File | Directory = source;
+      if (exportName !== source.name) {
+        if (!batchCreated) {
+          batch.create();
+          batchCreated = true;
+        }
+        exportSource =
+          source instanceof Directory
+            ? new Directory(batch, exportName)
+            : new File(batch, exportName);
+        await source.copy(exportSource);
+      }
+
+      createdNames.push(exportName);
+      await exportSource.copy(destination);
+      destinationNames.add(exportName);
+    }
+
+    return createdNames.length;
+  } catch (error) {
+    rollbackExportedEntries(destination, createdNames);
+    throw error;
+  } finally {
+    if (batchCreated && batch.exists) {
+      batch.delete();
+    }
+  }
+}
+
+function rollbackExportedEntries(destination: Directory, names: string[]): void {
+  let destinationEntries: (File | Directory)[];
+  try {
+    destinationEntries = destination.list();
+  } catch {
+    return;
+  }
+
+  const createdNames = new Set(names.map((name) => name.toLocaleLowerCase()));
+  for (const entry of destinationEntries) {
+    if (!createdNames.has(entry.name.toLocaleLowerCase())) {
+      continue;
+    }
+    try {
+      entry.delete();
+    } catch {
+      // Preserve the original export error if external storage cleanup also fails.
+    }
+  }
+}
+
+function isDirectoryPickerCancellation(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error);
+  return /pick(?:er|ing)?\b.*cancel|cancel.*pick/i.test(message);
+}
+
 export async function takeAndCopyPhoto(
   folderId: string,
   relativePath?: string,

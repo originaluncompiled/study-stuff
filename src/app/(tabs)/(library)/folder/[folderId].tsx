@@ -3,6 +3,7 @@ import { Stack, useFocusEffect, useLocalSearchParams, useRouter } from 'expo-rou
 import {
   Camera,
   ChevronRight,
+  Download,
   FilePlus2,
   FileText,
   FolderPlus,
@@ -42,6 +43,7 @@ import {
   createSubfolder,
   createTextFile,
   deleteEntry,
+  exportLibraryEntries,
   getLibraryFile,
   listDirectory,
   pickAndCopyFiles,
@@ -69,8 +71,10 @@ export default function FolderScreen() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [loadingEntries, setLoadingEntries] = useState(true);
   const [addingFiles, setAddingFiles] = useState(false);
+  const [exportingFiles, setExportingFiles] = useState(false);
   const [revision, setRevision] = useState(0);
   const hasLoadedEntries = useRef(false);
+  const exportingFilesRef = useRef(false);
   const [addSheetVisible, setAddSheetVisible] = useState(false);
   const [newFolderDialogVisible, setNewFolderDialogVisible] = useState(false);
   const [newTextDialogVisible, setNewTextDialogVisible] = useState(false);
@@ -317,6 +321,33 @@ export default function FolderScreen() {
     openPdfComposer(selectedEntries);
   }
 
+  async function exportSelectedEntries() {
+    if (exportingFilesRef.current) {
+      return;
+    }
+
+    const targets = selectedEntries;
+    exportingFilesRef.current = true;
+    setSelectionSheetVisible(false);
+    setExportingFiles(true);
+    try {
+      const exported = await exportLibraryEntries(folderId, targets);
+      if (exported > 0) {
+        setSelectedPaths(new Set());
+        void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        Alert.alert(
+          'Export complete',
+          `${exported} ${exported === 1 ? 'item was' : 'items were'} saved to the selected folder.`,
+        );
+      }
+    } catch (error) {
+      Alert.alert('Could not export selected items', getErrorMessage(error));
+    } finally {
+      exportingFilesRef.current = false;
+      setExportingFiles(false);
+    }
+  }
+
   function confirmDeleteSelected() {
     const targets = selectedEntries;
     setSelectionSheetVisible(false);
@@ -468,17 +499,21 @@ export default function FolderScreen() {
                 accessibilityRole="button"
                 accessibilityState={
                   selectionMode
-                    ? { expanded: selectionSheetVisible }
+                    ? {
+                        busy: exportingFiles,
+                        disabled: exportingFiles,
+                        expanded: selectionSheetVisible,
+                      }
                     : { busy: addingFiles, disabled: addingFiles }
                 }
                 android_ripple={iconButtonRipple}
                 className="h-11 w-11 items-center justify-center rounded-full ios:active:bg-line/50 web:active:bg-line/50"
-                disabled={!selectionMode && addingFiles}
+                disabled={exportingFiles || (!selectionMode && addingFiles)}
                 hitSlop={8}
                 onPress={() =>
                   selectionMode ? setSelectionSheetVisible(true) : setAddSheetVisible(true)
                 }>
-                {!selectionMode && addingFiles ? (
+                {exportingFiles || (!selectionMode && addingFiles) ? (
                   <ActivityIndicator color={colors.purple} />
                 ) : (
                   <>
@@ -504,7 +539,9 @@ export default function FolderScreen() {
         }}
       />
 
-      <View className="flex-1" pointerEvents={addingFiles ? 'none' : 'auto'}>
+      <View
+        className="flex-1"
+        pointerEvents={addingFiles || exportingFiles ? 'none' : 'auto'}>
         {error ? (
           <View className="m-5 rounded-2xl border border-danger bg-paper-raised px-5 py-4">
             <AppText variant="label" className="text-danger">
@@ -647,6 +684,11 @@ export default function FolderScreen() {
           icon={Star}
           label="Unfavourite"
           onPress={() => void setSelectedFavouriteState(false)}
+        />
+        <ActionRow
+          icon={Download}
+          label={selectedPaths.size === 1 ? 'Export file' : 'Export files'}
+          onPress={() => void exportSelectedEntries()}
         />
         <ActionRow icon={FilePlus2} label="Combine into PDF" onPress={combineSelectedEntries} />
         <ActionRow

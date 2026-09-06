@@ -1,4 +1,4 @@
-import { act, fireEvent, render, waitFor } from '@testing-library/react-native';
+import { act, fireEvent, render, waitFor, within } from '@testing-library/react-native';
 import { Alert } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
@@ -12,6 +12,9 @@ const mockListDirectory = jest.fn();
 const mockPush = jest.fn();
 const mockDeleteEntry = jest.fn(
   (_folderId: string, _relativePath: string, _kind: string) => undefined,
+);
+const mockExportLibraryEntries = jest.fn(async (_folderId: string, entries: unknown[]) =>
+  Promise.resolve(entries.length),
 );
 const mockWriteFavouritePaths = jest.fn(
   async (_folderId: string, _paths: Set<string>) => undefined,
@@ -58,6 +61,8 @@ jest.mock('@/services/library-files', () => ({
   createTextFile: jest.fn(),
   deleteEntry: (folderId: string, relativePath: string, kind: string) =>
     mockDeleteEntry(folderId, relativePath, kind),
+  exportLibraryEntries: (folderId: string, entries: unknown[]) =>
+    mockExportLibraryEntries(folderId, entries),
   getLibraryFile: (_folderId: string, path: string) => ({ uri: `file://${path}` }),
   listDirectory: () => mockListDirectory(),
   pickAndCopyFiles: (folderId: string, path?: string) => mockPickAndCopyFiles(folderId, path),
@@ -235,6 +240,7 @@ describe('FolderScreen imports', () => {
 
     await flushFolderLoad();
     await fireEvent.press(view.getByRole('button', { name: 'Manage Notes.pdf' }));
+    expect(view.queryByRole('button', { name: 'Export file' })).toBeNull();
     await fireEvent.press(view.getByRole('button', { name: 'Combine with other PDFs' }));
 
     expect(mockPush).toHaveBeenCalledWith({
@@ -334,6 +340,50 @@ describe('FolderScreen imports', () => {
     await fireEvent.press(view.getByRole('checkbox', { name: 'Unselect all' }));
     expect(mockStackOptions?.title).toBe('Chapter 1');
     expect(view.queryByRole('checkbox', { name: 'Select all' })).toBeNull();
+  });
+
+  test('exports selected items from above the bulk PDF action', async () => {
+    const selectedEntries = [
+      {
+        childCount: null,
+        kind: 'image',
+        name: 'Diagram.jpg',
+        relativePath: 'Chapter 1/Diagram.jpg',
+        size: 2048,
+      },
+      {
+        childCount: null,
+        kind: 'pdf',
+        name: 'Notes.pdf',
+        relativePath: 'Chapter 1/Notes.pdf',
+        size: 4096,
+      },
+    ];
+    mockListDirectory.mockReturnValue(selectedEntries);
+    const alertSpy = jest.spyOn(Alert, 'alert');
+    const view = await renderFolder();
+
+    await flushFolderLoad();
+    await fireEvent(view.getByRole('button', { name: 'Open Notes.pdf' }), 'longPress');
+    await fireEvent.press(view.getByRole('checkbox', { name: 'Select Diagram.jpg' }));
+    await fireEvent.press(view.getByRole('button', { name: 'Selected item actions' }));
+
+    const panel = view.getByTestId('action-sheet-panel');
+    const sheetButtons = within(panel).getAllByRole('button');
+    const exportAction = view.getByRole('button', { name: 'Export files' });
+    const combineAction = view.getByRole('button', { name: 'Combine into PDF' });
+    expect(sheetButtons.indexOf(exportAction)).toBeLessThan(sheetButtons.indexOf(combineAction));
+
+    await fireEvent.press(exportAction);
+    await waitFor(() =>
+      expect(mockExportLibraryEntries).toHaveBeenCalledWith('folder-1', selectedEntries),
+    );
+    expect(alertSpy).toHaveBeenCalledWith(
+      'Export complete',
+      '2 items were saved to the selected folder.',
+    );
+    expect(mockStackOptions?.title).toBe('Chapter 1');
+    alertSpy.mockRestore();
   });
 
   test('bulk favourites and unfavourites selected items', async () => {
