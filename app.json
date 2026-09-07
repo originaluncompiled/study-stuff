@@ -7,9 +7,10 @@
     "orientation": "default",
     "icon": "./assets/images/icon.png",
     "scheme": "studystuff",
-    "userInterfaceStyle": "automatic",
+    "userInterfaceStyle": "light",
     "ios": {
-      "icon": "./assets/images/icon.png"
+      "icon": "./assets/images/icon.png",
+      "bundleIdentifier": "com.justoriginal.studystuff"
     },
     "android": {
       "package": "com.justoriginal.studystuff",
@@ -44,9 +45,14 @@
         {
           "backgroundColor": "#F7F1E3",
           "image": "./assets/images/splash-icon.png",
-          "imageWidth": 220
+          "imageWidth": 220,
+          "dark": {
+            "backgroundColor": "#19161D",
+            "image": "./assets/images/splash-icon-dark.png"
+          }
         }
       ],
+      "./plugins/with-stored-theme",
       [
         "expo-status-bar",
         {

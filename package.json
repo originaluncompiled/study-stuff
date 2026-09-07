@@ -69,5 +69,14 @@
     "test": "jest --runInBand",
     "test:watch": "jest --watch"
   },
+  "expo": {
+    "autolinking": {
+      "android": {
+        "exclude": [
+          "expo-system-ui"
+        ]
+      }
+    }
+  },
   "private": true
 }

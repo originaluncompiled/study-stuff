@@ -3,6 +3,7 @@ import { create } from 'zustand';
 
 import { themeColors, type ThemeMode } from '@/constants/theme';
 import { readThemeMode, writeThemeMode } from '@/services/theme-preference';
+import { persistNativeThemeMode } from '../../modules/stored-theme';
 
 type ThemeStore = {
   mode: ThemeMode;
@@ -86,6 +87,7 @@ export function useThemeColors() {
 
 function applyNativeColorScheme(mode: ThemeMode): void {
   if (Platform.OS !== 'web') {
+    persistNativeThemeMode(mode);
     Appearance.setColorScheme(mode);
   }
 }

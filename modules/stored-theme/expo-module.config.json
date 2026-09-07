@@ -1,0 +1,9 @@
+{
+  "platforms": ["apple", "android"],
+  "apple": {
+    "modules": ["StudyStuffStoredThemeModule"]
+  },
+  "android": {
+    "modules": ["expo.modules.studystuffstoredtheme.StudyStuffStoredThemeModule"]
+  }
+}
