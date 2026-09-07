@@ -268,14 +268,9 @@ export async function exportLibraryEntries(
     return 0;
   }
 
-  let destination: Directory;
-  try {
-    destination = await Directory.pickDirectoryAsync();
-  } catch (error) {
-    if (isDirectoryPickerCancellation(error)) {
-      return 0;
-    }
-    throw error;
+  const destination = await pickExportDestination();
+  if (!destination) {
+    return 0;
   }
 
   ensureLibraryStorage();
@@ -287,10 +282,7 @@ export async function exportLibraryEntries(
     const destinationNames = new Set(destination.list().map((entry) => entry.name));
 
     for (const entry of entries) {
-      const source =
-        entry.kind === 'directory'
-          ? new Directory(getFolderDirectory(folderId), ...relativePathSegments(entry.relativePath))
-          : getLibraryFile(folderId, entry.relativePath);
+      const source = getLibraryEntrySource(folderId, entry);
       if (!source.exists) {
         throw new Error(`“${entry.name}” is no longer stored on this device.`);
       }
@@ -325,6 +317,60 @@ export async function exportLibraryEntries(
   }
 }
 
+export async function exportLibraryFolder(folderId: string, folderName: string): Promise<number> {
+  if (Platform.OS === 'web') {
+    throw new Error('Exporting files to device storage is only available on Android and iOS.');
+  }
+
+  const preferredName = validateItemName(folderName);
+  const destination = await pickExportDestination();
+  if (!destination) {
+    return 0;
+  }
+
+  ensureLibraryStorage();
+  const source = getFolderDirectory(folderId);
+  if (!source.exists) {
+    throw new Error('This folder no longer exists.');
+  }
+
+  const batch = new Directory(stagingDirectory(), randomUUID());
+  const createdNames: string[] = [];
+
+  try {
+    const destinationNames = new Set(destination.list().map((entry) => entry.name));
+    const exportName = getAvailableFileName(preferredName, destinationNames);
+    batch.create();
+    const exportSource = new Directory(batch, exportName);
+    exportSource.create();
+
+    for (const entry of listDirectory(folderId)) {
+      const child = getLibraryEntrySource(folderId, entry);
+      if (!child.exists) {
+        throw new Error(`“${entry.name}” is no longer stored on this device.`);
+      }
+      await child.copy(exportSource);
+    }
+
+    createdNames.push(exportName);
+    await exportSource.copy(destination);
+    return 1;
+  } catch (error) {
+    rollbackExportedEntries(destination, createdNames);
+    throw error;
+  } finally {
+    if (batch.exists) {
+      batch.delete();
+    }
+  }
+}
+
+function getLibraryEntrySource(folderId: string, entry: LibraryEntry): File | Directory {
+  return entry.kind === 'directory'
+    ? new Directory(getFolderDirectory(folderId), ...relativePathSegments(entry.relativePath))
+    : getLibraryFile(folderId, entry.relativePath);
+}
+
 function rollbackExportedEntries(destination: Directory, names: string[]): void {
   let destinationEntries: (File | Directory)[];
   try {
@@ -349,6 +395,17 @@ function rollbackExportedEntries(destination: Directory, names: string[]): void 
 function isDirectoryPickerCancellation(error: unknown): boolean {
   const message = error instanceof Error ? error.message : String(error);
   return /pick(?:er|ing)?\b.*cancel|cancel.*pick/i.test(message);
+}
+
+async function pickExportDestination(): Promise<Directory | null> {
+  try {
+    return await Directory.pickDirectoryAsync();
+  } catch (error) {
+    if (isDirectoryPickerCancellation(error)) {
+      return null;
+    }
+    throw error;
+  }
 }
 
 export async function takeAndCopyPhoto(

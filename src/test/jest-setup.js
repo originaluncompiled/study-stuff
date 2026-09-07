@@ -35,5 +35,11 @@ jest.mock('expo-notifications', () => ({
   setNotificationChannelAsync: jest.fn(async () => null),
   setNotificationHandler: jest.fn(),
 }));
+jest.mock('expo-intent-launcher', () => ({
+  ActivityAction: {
+    REQUEST_SCHEDULE_EXACT_ALARM: 'android.settings.REQUEST_SCHEDULE_EXACT_ALARM',
+  },
+  startActivityAsync: jest.fn(async () => ({ resultCode: 0 })),
+}));
 jest.mock('react-native-worklets', () => require('react-native-worklets/lib/module/mock'));
 require('react-native-reanimated').setUpTests();

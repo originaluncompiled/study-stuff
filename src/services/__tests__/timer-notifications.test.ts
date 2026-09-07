@@ -1,3 +1,4 @@
+import * as IntentLauncher from 'expo-intent-launcher';
 import * as Notifications from 'expo-notifications';
 import { AppState, Platform } from 'react-native';
 
@@ -6,6 +7,11 @@ import {
   syncTimerNotifications,
 } from '@/services/timer-notifications';
 import type { TimerState } from '@/types/timer';
+
+jest.mock('expo-constants', () => ({
+  __esModule: true,
+  default: { expoConfig: { android: { package: 'com.justoriginal.studystuff' } } },
+}));
 
 const scheduleMock = Notifications.scheduleNotificationAsync as jest.MockedFunction<
   typeof Notifications.scheduleNotificationAsync
@@ -24,6 +30,9 @@ const setChannelMock = Notifications.setNotificationChannelAsync as jest.MockedF
 >;
 const setHandlerMock = Notifications.setNotificationHandler as jest.MockedFunction<
   typeof Notifications.setNotificationHandler
+>;
+const startActivityMock = IntentLauncher.startActivityAsync as jest.MockedFunction<
+  typeof IntentLauncher.startActivityAsync
 >;
 
 function runningTimer(overrides: Partial<TimerState> = {}): TimerState {
@@ -45,6 +54,7 @@ describe('timer notifications', () => {
     requestPermissionsMock.mockClear();
     scheduleMock.mockClear();
     setChannelMock.mockClear();
+    startActivityMock.mockClear();
     scheduleMock.mockImplementation(async (request) => request.identifier ?? 'notification');
   });
 
@@ -151,6 +161,25 @@ describe('timer notifications', () => {
     expect(setChannelMock).toHaveBeenCalledWith(
       'timer-completions-v2',
       expect.not.objectContaining({ sound: expect.anything() }),
+    );
+  });
+
+  test('opens the app-specific exact alarm settings on Android 12 and later', async () => {
+    const originalPlatform = Platform.OS;
+    const originalVersion = Platform.Version;
+    Object.defineProperty(Platform, 'OS', { configurable: true, value: 'android' });
+    Object.defineProperty(Platform, 'Version', { configurable: true, value: 31 });
+
+    try {
+      await requestTimerNotificationPermission();
+    } finally {
+      Object.defineProperty(Platform, 'OS', { configurable: true, value: originalPlatform });
+      Object.defineProperty(Platform, 'Version', { configurable: true, value: originalVersion });
+    }
+
+    expect(startActivityMock).toHaveBeenCalledWith(
+      IntentLauncher.ActivityAction.REQUEST_SCHEDULE_EXACT_ALARM,
+      { data: 'package:com.justoriginal.studystuff' },
     );
   });
 });

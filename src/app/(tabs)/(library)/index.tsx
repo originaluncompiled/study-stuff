@@ -1,7 +1,7 @@
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
-import { FilePlus2, FolderInput, Palette, Pencil, Trash2 } from 'lucide-react-native';
-import { useCallback, useState } from 'react';
+import { Download, FilePlus2, FolderInput, Palette, Pencil, Trash2 } from 'lucide-react-native';
+import { useCallback, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, Platform, View } from 'react-native';
 import Animated, { useAnimatedRef } from 'react-native-reanimated';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -17,6 +17,7 @@ import { FolderTile } from '@/components/folder-tile';
 import { ImportOverlay } from '@/components/import-overlay';
 import { getMainTabBarHeight } from '@/components/main-tab-bar';
 import { NameDialog } from '@/components/name-dialog';
+import { exportLibraryFolder } from '@/services/library-files';
 import { useLibraryStore } from '@/store/library-store';
 import { useThemeColors } from '@/store/theme-store';
 import type { FolderColor, ImportProgress, StudyFolder } from '@/types/library';
@@ -50,8 +51,10 @@ export default function LibraryScreen() {
   const [actionTarget, setActionTarget] = useState<StudyFolder | null>(null);
   const [colorTargetId, setColorTargetId] = useState<string | null>(null);
   const [changingColor, setChangingColor] = useState(false);
+  const [exportingFolder, setExportingFolder] = useState(false);
   const [importing, setImporting] = useState(false);
   const [importProgress, setImportProgress] = useState(initialProgress);
+  const exportingFolderRef = useRef(false);
 
   const items: GridItem[] = [
     ...folders.map((folder) => ({ type: 'folder' as const, folder })),
@@ -150,6 +153,29 @@ export default function LibraryScreen() {
     }
   }
 
+  async function exportFolder(folder: StudyFolder) {
+    if (exportingFolderRef.current) {
+      return;
+    }
+
+    exportingFolderRef.current = true;
+    setActionTarget(null);
+    setExportingFolder(true);
+    try {
+      const exported = await exportLibraryFolder(folder.id, folder.name);
+      if (exported > 0) {
+        void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        Alert.alert('Export complete', `“${folder.name}” was saved to the selected folder.`);
+      }
+    } catch (error) {
+      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      Alert.alert('Could not export folder', getErrorMessage(error));
+    } finally {
+      exportingFolderRef.current = false;
+      setExportingFolder(false);
+    }
+  }
+
   async function selectFolderColor(color: FolderColor) {
     if (!colorTarget || changingColor) {
       return;
@@ -191,6 +217,7 @@ export default function LibraryScreen() {
     <SafeAreaView className="flex-1 bg-paper" edges={['top', 'left', 'right']}>
       <Animated.ScrollView
         ref={scrollableRef}
+        pointerEvents={exportingFolder ? 'none' : 'auto'}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{
           paddingHorizontal: 20,
@@ -233,6 +260,19 @@ export default function LibraryScreen() {
           </AppText>
         </View>
       </Animated.ScrollView>
+
+      {exportingFolder ? (
+        <View
+          accessibilityLabel="Exporting folder"
+          accessibilityLiveRegion="polite"
+          accessibilityRole="progressbar"
+          className="absolute left-5 right-5 z-10 flex-row items-center justify-center gap-3 rounded-2xl border-2 border-strong-line bg-paper-raised px-5 py-4"
+          pointerEvents="none"
+          style={{ bottom: getMainTabBarHeight(insets.bottom) + 12 }}>
+          <ActivityIndicator color={colors.purple} size="small" />
+          <AppText variant="label">Exporting folder...</AppText>
+        </View>
+      ) : null}
 
       <ActionSheet
         title="Add to your library"
@@ -277,6 +317,11 @@ export default function LibraryScreen() {
             setColorTargetId(actionTarget?.id ?? null);
             setActionTarget(null);
           }}
+        />
+        <ActionRow
+          icon={Download}
+          label="Export files"
+          onPress={() => actionTarget && void exportFolder(actionTarget)}
         />
         <ActionRow
           destructive

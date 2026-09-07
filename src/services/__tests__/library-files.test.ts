@@ -6,6 +6,8 @@ import {
   createTextFile,
   deleteFolderDirectory,
   exportLibraryEntries,
+  exportLibraryFolder,
+  writeFolderMetadata,
   writeTextFile,
 } from '@/services/library-files';
 import type { LibraryEntry } from '@/types/library';
@@ -80,6 +82,37 @@ describe('library file export', () => {
       'Notes.txt',
     ]);
     await expect(new File(destination, 'Notes (2).txt').text()).resolves.toBe('Latest notes');
+  });
+
+  test('exports a main folder under its display name without internal metadata', async () => {
+    writeFolderMetadata({
+      color: 'purple',
+      createdAt: '2026-08-25T00:00:00.000Z',
+      id: folderId,
+      name: 'Biology',
+      updatedAt: '2026-08-25T00:00:00.000Z',
+    });
+    createTextFile(folderId, '', 'Notes');
+    await writeTextFile(folderId, 'Notes.txt', 'Study notes');
+
+    await expect(exportLibraryFolder(folderId, 'Biology')).resolves.toBe(1);
+
+    const destination = new Directory(destinationUri);
+    expect(destination.list().map((item) => item.name)).toEqual(['Biology']);
+    const exportedFolder = new Directory(destination, 'Biology');
+    expect(exportedFolder.list().map((item) => item.name)).toEqual(['Notes.txt']);
+    await expect(new File(exportedFolder, 'Notes.txt').text()).resolves.toBe('Study notes');
+  });
+
+  test('numbers repeated main-folder exports', async () => {
+    await exportLibraryFolder(folderId, 'Biology');
+    await exportLibraryFolder(folderId, 'Biology');
+
+    const destination = new Directory(destinationUri);
+    expect(destination.list().map((item) => item.name).sort()).toEqual([
+      'Biology',
+      'Biology (2)',
+    ]);
   });
 
   test('treats closing the directory picker as a cancelled export', async () => {

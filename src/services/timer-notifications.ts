@@ -1,3 +1,5 @@
+import Constants from 'expo-constants';
+import * as IntentLauncher from 'expo-intent-launcher';
 import * as Notifications from 'expo-notifications';
 import { AppState, Platform } from 'react-native';
 
@@ -28,6 +30,7 @@ export async function requestTimerNotificationPermission(): Promise<boolean> {
   await ensureTimerNotificationChannel();
   const existing = await Notifications.getPermissionsAsync();
   if (allowsNotifications(existing)) {
+    await requestExactAlarmAccess();
     return true;
   }
   if (!existing.canAskAgain) {
@@ -41,7 +44,11 @@ export async function requestTimerNotificationPermission(): Promise<boolean> {
       allowSound: true,
     },
   });
-  return allowsNotifications(requested);
+  const allowed = allowsNotifications(requested);
+  if (allowed) {
+    await requestExactAlarmAccess();
+  }
+  return allowed;
 }
 
 export async function syncTimerNotifications(
@@ -113,6 +120,22 @@ async function ensureTimerNotificationChannel(): Promise<void> {
     name: 'Timer completions',
     vibrationPattern: [0, 250, 250, 250],
   });
+}
+
+async function requestExactAlarmAccess(): Promise<void> {
+  if (
+    Platform.OS !== 'android' ||
+    typeof Platform.Version !== 'number' ||
+    Platform.Version < 31
+  ) {
+    return;
+  }
+
+  const packageName = Constants.expoConfig?.android?.package;
+  await IntentLauncher.startActivityAsync(
+    IntentLauncher.ActivityAction.REQUEST_SCHEDULE_EXACT_ALARM,
+    packageName ? { data: `package:${packageName}` } : undefined,
+  );
 }
 
 function allowsNotifications(status: Notifications.NotificationPermissionsStatus): boolean {
